@@ -5,8 +5,6 @@ on:
     types: [opened, closed, assigned, unassigned, labeled, unlabeled]
   pull_request:
     types: [opened, closed, merged, reopened, labeled, unlabeled]
-  project_card:
-    types: [created, edited, moved, deleted]
 
 permissions:
   issues: write
