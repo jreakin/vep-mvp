@@ -54,15 +54,15 @@ jobs:
             return;
           }
           
-          // Get project columns - match exact column names
+          // Get project columns - match exact column names with emojis
           const columns = vepProject.columns.nodes;
           console.log('Available columns:', columns.map(c => c.name));
           
           const readyColumn = columns.find(c => c.name === 'Ready');
           const inProgressColumn = columns.find(c => c.name === 'In Progress');
-          const codeReviewColumn = columns.find(c => c.name === 'Code Review');
+          const codeReviewColumn = columns.find(c => c.name === '👀 Code Review');
           const testingColumn = columns.find(c => c.name === 'Testing');
-          const doneColumn = columns.find(c => c.name === 'Done');
+          const doneColumn = columns.find(c => c.name === '🎉 Done');
           
           console.log('Found columns:', {
             ready: readyColumn?.name,

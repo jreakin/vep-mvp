@@ -7,9 +7,9 @@ The project automation workflow should automatically move issues and PRs between
 ### **Your Project Board Columns:**
 - ✅ **Ready**
 - ✅ **In Progress** 
-- ✅ **Code Review**
+- ✅ **👀 Code Review**
 - ✅ **Testing**
-- ✅ **Done**
+- ✅ **🎉 Done**
 
 ### **Test 1: Issue Assignment**
 1. **Go to Issue #2:** https://github.com/jreakin/vep-mvp/issues/2
@@ -47,11 +47,11 @@ The project automation workflow should automatically move issues and PRs between
 
 **Issue 2: "Target column not found"**
 - **Solution:** Check that your column names match exactly:
-  - "Ready" (not "🟡 Ready")
-  - "In Progress" (not "🟠 In Progress")
-  - "Code Review" (not "👀 Code Review")
-  - "Testing" (not "✅ Testing")
-  - "Done" (not "🎉 Done")
+  - "Ready"
+  - "In Progress"
+  - "👀 Code Review"
+  - "Testing"
+  - "🎉 Done"
 
 **Issue 3: "Project card not found"**
 - **Solution:** Make sure the issue is added to the project board
@@ -93,8 +93,8 @@ gh pr merge 1 --squash --delete-branch
 - Or update the workflow to match your exact project name
 
 ### **Check 2: Column Names**
-- Make sure they match exactly: "Ready", "In Progress", "Code Review", "Testing", "Done"
-- No emojis or extra characters
+- Make sure they match exactly: "Ready", "In Progress", "👀 Code Review", "Testing", "🎉 Done"
+- The emojis are part of the column names
 
 ### **Check 3: Issue in Project**
 - Make sure Issue #2 is added to the project board
