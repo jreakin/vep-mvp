@@ -1,8 +1,8 @@
 # VEP MVP - Voter Engagement Platform
 
-[![Backend CI](https://github.com/YOUR-USERNAME/vep-mvp/workflows/Backend%20CI/badge.svg)](https://github.com/YOUR-USERNAME/vep-mvp/actions)
-[![iOS CI](https://github.com/YOUR-USERNAME/vep-mvp/workflows/iOS%20CI/badge.svg)](https://github.com/YOUR-USERNAME/vep-mvp/actions)
-[![codecov](https://codecov.io/gh/YOUR-USERNAME/vep-mvp/branch/main/graph/badge.svg)](https://codecov.io/gh/YOUR-USERNAME/vep-mvp)
+[![Backend CI](https://github.com/jreakin/vep-mvp/workflows/Backend%20CI/badge.svg)](https://github.com/jreakin/vep-mvp/actions)
+[![iOS CI](https://github.com/jreakin/vep-mvp/workflows/iOS%20CI/badge.svg)](https://github.com/jreakin/vep-mvp/actions)
+[![codecov](https://codecov.io/gh/jreakin/vep-mvp/branch/main/graph/badge.svg)](https://codecov.io/gh/jreakin/vep-mvp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A production-ready MVP for canvassing and voter engagement operations, built using a **multi-agent AI development workflow**. Features a Python/FastAPI backend with PostgreSQL/PostGIS and a native iOS app with SwiftUI.
@@ -114,7 +114,7 @@ Each agent:
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR-USERNAME/vep-mvp.git
+git clone https://github.com/jreakin/vep-mvp.git
 cd vep-mvp
 
 # Run automated setup
@@ -256,9 +256,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Support
 
 - 📖 **Documentation:** See the `docs/` folder
-- 🐛 **Bug Reports:** [Open an issue](https://github.com/YOUR-USERNAME/vep-mvp/issues/new?template=bug-report.md)
-- 💡 **Feature Requests:** [Open a discussion](https://github.com/YOUR-USERNAME/vep-mvp/discussions)
-- ❓ **Questions:** [Open an issue](https://github.com/YOUR-USERNAME/vep-mvp/issues/new) with "question" label
+- 🐛 **Bug Reports:** [Open an issue](https://github.com/jreakin/vep-mvp/issues/new?template=bug-report.md)
+- 💡 **Feature Requests:** [Open a discussion](https://github.com/jreakin/vep-mvp/discussions)
+- ❓ **Questions:** [Open an issue](https://github.com/jreakin/vep-mvp/issues/new) with "question" label
 
 ---
 
