@@ -1,8 +1,7 @@
 """
 VEP MVP Backend - Configuration
 
-This is a skeleton file created for multi-agent development.
-Agent 2 (Backend Engineer) will complete this implementation.
+Application settings loaded from environment variables.
 """
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -35,6 +34,8 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: list[str] = [
         "http://localhost:3000",
         "http://localhost:8000",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8000",
     ]
 
     model_config = SettingsConfigDict(
