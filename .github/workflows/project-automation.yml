@@ -8,6 +8,12 @@ on:
   project_card:
     types: [created, edited, moved, deleted]
 
+permissions:
+  issues: write
+  pull-requests: write
+  contents: write
+  projects: write
+
 jobs:
   update-project-status:
     runs-on: ubuntu-latest
@@ -20,133 +26,58 @@ jobs:
       uses: actions/github-script@v7
       with:
         script: |
+          // Simplified project automation - just add comments for manual project board updates
           const { issue, pull_request } = context.payload;
           const item = issue || pull_request;
           
           if (!item) return;
           
-          // Get project information
-          const projectQuery = `
-            query {
-              repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-                projects(first: 10) {
-                  nodes {
-                    id
-                    name
-                    columns(first: 10) {
-                      nodes {
-                        id
-                        name
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          `;
-          
-          const projectResult = await github.graphql(projectQuery);
-          const projects = projectResult.repository.projects.nodes;
-          const vepProject = projects.find(p => p.name.includes('VEP MVP'));
-          
-          if (!vepProject) {
-            console.log('VEP MVP project not found');
-            return;
-          }
-          
-          // Get project columns - match exact column names with emojis
-          const columns = vepProject.columns.nodes;
-          console.log('Available columns:', columns.map(c => c.name));
-          
-          const readyColumn = columns.find(c => c.name === 'Ready');
-          const inProgressColumn = columns.find(c => c.name === 'In Progress');
-          const codeReviewColumn = columns.find(c => c.name === '👀 Code Review');
-          const testingColumn = columns.find(c => c.name === 'Testing');
-          const doneColumn = columns.find(c => c.name === '🎉 Done');
-          
-          console.log('Found columns:', {
-            ready: readyColumn?.name,
-            inProgress: inProgressColumn?.name,
-            codeReview: codeReviewColumn?.name,
-            testing: testingColumn?.name,
-            done: doneColumn?.name
-          });
-          
-          // Find the project card for this issue/PR
-          const cardQuery = `
-            query {
-              repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-                issue(number: ${item.number}) {
-                  projectItems(first: 10) {
-                    nodes {
-                      id
-                      project {
-                        id
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          `;
-          
-          const cardResult = await github.graphql(cardQuery);
-          const projectItems = cardResult.repository.issue.projectItems.nodes;
-          const vepProjectItem = projectItems.find(item => item.project.id === vepProject.id);
-          
-          if (!vepProjectItem) {
-            console.log('Project card not found for this issue');
-            return;
-          }
-          
-          // Determine which column to move to based on event
-          let targetColumn = null;
+          let statusMessage = '';
+          let emoji = '🔄';
           
           if (context.eventName === 'issues') {
-            const { action, issue } = context.payload;
+            const { action } = context.payload;
             
             if (action === 'assigned') {
-              targetColumn = inProgressColumn;
+              statusMessage = 'This issue has been assigned and should be moved to "In Progress" column.';
+              emoji = '🚀';
             } else if (action === 'closed') {
-              targetColumn = doneColumn;
+              statusMessage = 'This issue has been closed and should be moved to "🎉 Done" column.';
+              emoji = '✅';
             } else if (action === 'labeled' && context.payload.label.name === 'in-progress') {
-              targetColumn = inProgressColumn;
+              statusMessage = 'This issue is now in progress and should be moved to "In Progress" column.';
+              emoji = '🔄';
             } else if (action === 'labeled' && context.payload.label.name === 'completed') {
-              targetColumn = doneColumn;
+              statusMessage = 'This issue is completed and should be moved to "🎉 Done" column.';
+              emoji = '✅';
             }
           } else if (context.eventName === 'pull_request') {
-            const { action, pull_request } = context.payload;
+            const { action } = context.payload;
             
             if (action === 'opened' || action === 'reopened') {
-              targetColumn = codeReviewColumn;
+              statusMessage = 'This pull request has been opened and should be moved to "👀 Code Review" column.';
+              emoji = '👀';
             } else if (action === 'merged') {
-              targetColumn = testingColumn;
-            } else if (action === 'closed' && !pull_request.merged) {
-              targetColumn = readyColumn;
+              statusMessage = 'This pull request has been merged and should be moved to "Testing" column.';
+              emoji = '🧪';
+            } else if (action === 'closed' && !context.payload.pull_request.merged) {
+              statusMessage = 'This pull request has been closed and should be moved back to "Ready" column.';
+              emoji = '↩️';
             }
           }
           
-          if (targetColumn) {
-            // Move the project card
-            const moveCardMutation = `
-              mutation {
-                moveProjectCard(input: {
-                  cardId: "${vepProjectItem.id}",
-                  columnId: "${targetColumn.id}"
-                }) {
-                  clientMutationId
-                }
-              }
-            `;
-            
+          if (statusMessage) {
             try {
-              await github.graphql(moveCardMutation);
-              console.log(`Moved project card to ${targetColumn.name}`);
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: item.number,
+                body: `${emoji} **Project Board Update**: ${statusMessage}`
+              });
+              console.log(`Added project update comment to ${context.eventName} #${item.number}`);
             } catch (error) {
-              console.log(`Failed to move project card: ${error.message}`);
+              console.log(`Failed to add comment: ${error.message}`);
             }
-          } else {
-            console.log('Target column not found, available columns:', columns.map(c => c.name));
           }
 
   update-issue-dependencies:
@@ -172,51 +103,40 @@ jobs:
           const agentNumber = agentLabels[0].name.split('-')[1];
           
           // Find issues that depend on this agent
-          const dependentIssues = await github.rest.issues.listForRepo({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            state: 'open',
-            labels: 'blocked'
-          });
-          
-          for (const dependentIssue of dependentIssues.data) {
-            const body = dependentIssue.body || '';
+          try {
+            const dependentIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'blocked'
+            });
             
-            // Check if this issue is mentioned as a blocker
-            if (body.includes(`#${issue.number}`) || 
-                body.includes(`Agent ${agentNumber}`) ||
-                body.includes(`Agent ${agentNumber} database schema`) ||
-                body.includes(`Agent ${agentNumber} backend API`)) {
+            for (const dependentIssue of dependentIssues.data) {
+              const body = dependentIssue.body || '';
               
-              // Remove blocked label and add ready label
-              await github.rest.issues.removeLabel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: dependentIssue.number,
-                name: 'blocked'
-              });
-              
-              await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: dependentIssue.number,
-                labels: ['ready']
-              });
-              
-              // Update issue body to reflect unblocked status
-              const updatedBody = body
-                .replace(/Status: Blocked.*/g, 'Status: Ready to start')
-                .replace(/Blocker: .*/g, 'Blocker: None');
-              
-              await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: dependentIssue.number,
-                body: updatedBody
-              });
-              
-              console.log(`Unblocked issue #${dependentIssue.number}`);
+              // Check if this issue is mentioned as a blocker
+              if (body.includes(`#${issue.number}`) || 
+                  body.includes(`Agent ${agentNumber}`) ||
+                  body.includes(`Agent ${agentNumber} database schema`) ||
+                  body.includes(`Agent ${agentNumber} backend API`)) {
+                
+                // Add a comment about the dependency being resolved
+                try {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: dependentIssue.number,
+                    body: `🎉 **Dependency Resolved**: Agent ${agentNumber} (Issue #${issue.number}) has been completed. This issue is now ready to start!`
+                  });
+                } catch (error) {
+                  console.log(`Could not add comment to issue #${dependentIssue.number}: ${error.message}`);
+                }
+                
+                console.log(`Notified issue #${dependentIssue.number} that dependency is resolved`);
+              }
             }
+          } catch (error) {
+            console.log(`Error checking dependent issues: ${error.message}`);
           }
 
   create-progress-summary:
@@ -241,41 +161,15 @@ jobs:
           
           const agentNumber = agentLabels[0].name.split('-')[1];
           
-          // Read current PROGRESS.md
-          const progressFile = await github.rest.repos.getContent({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            path: 'PROGRESS.md'
-          });
-          
-          let content = Buffer.from(progressFile.data.content, 'base64').toString();
-          
-          // Update the specific agent's status
-          const agentSection = `## Agent ${agentNumber}`;
-          const agentIndex = content.indexOf(agentSection);
-          
-          if (agentIndex !== -1) {
-            // Find the end of this agent's section
-            const nextAgentIndex = content.indexOf('## Agent', agentIndex + 1);
-            const endIndex = nextAgentIndex === -1 ? content.length : nextAgentIndex;
-            
-            const agentContent = content.substring(agentIndex, endIndex);
-            const updatedAgentContent = agentContent.replace(
-              /Status: .*/g,
-              `Status: ✅ **COMPLETED** - ${new Date().toISOString().split('T')[0]}`
-            );
-            
-            content = content.substring(0, agentIndex) + updatedAgentContent + content.substring(endIndex);
-            
-            // Update the file
-            await github.rest.repos.createOrUpdateFileContents({
+          // Add a comment to the issue about completion
+          try {
+            await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              path: 'PROGRESS.md',
-              message: `feat: Mark Agent ${agentNumber} as completed`,
-              content: Buffer.from(content).toString('base64'),
-              sha: progressFile.data.sha
+              issue_number: issue.number,
+              body: `🎉 **Agent ${agentNumber} Completed**: This agent's work has been completed and merged. Please update the PROGRESS.md file manually to reflect this completion.`
             });
-            
-            console.log(`Updated PROGRESS.md for Agent ${agentNumber}`);
+            console.log(`Added completion comment to Agent ${agentNumber} issue`);
+          } catch (error) {
+            console.log(`Could not add completion comment: ${error.message}`);
           }
