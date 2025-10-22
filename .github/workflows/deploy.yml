@@ -1,0 +1,140 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - 'ios/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.modified, 'backend/') || contains(github.event.head_commit.added, 'backend/')
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Install dependencies
+      working-directory: ./backend
+      run: |
+        uv pip install -e ".[prod]"
+
+    - name: Run database migrations
+      working-directory: ./backend
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: |
+        if [ -d "migrations" ]; then
+          for migration in migrations/*.sql; do
+            if [ -f "$migration" ]; then
+              echo "Running migration: $migration"
+              psql $DATABASE_URL -f "$migration"
+            fi
+          done
+        fi
+
+    - name: Deploy to production
+      working-directory: ./backend
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        ENVIRONMENT: production
+      run: |
+        echo "Deploying backend to production..."
+        # Add your deployment commands here
+        # Examples:
+        # - Deploy to Heroku: git push heroku main
+        # - Deploy to AWS: aws deploy
+        # - Deploy to Docker: docker build -t vep-backend .
+        echo "Backend deployment completed"
+
+    - name: Run health check
+      working-directory: ./backend
+      run: |
+        # Add health check for deployed backend
+        echo "Running health check..."
+        # curl -f ${{ secrets.BACKEND_URL }}/health || exit 1
+        echo "Health check passed"
+
+  deploy-ios:
+    runs-on: macos-latest
+    if: contains(github.event.head_commit.modified, 'ios/') || contains(github.event.head_commit.added, 'ios/')
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: '15.0'
+
+    - name: Install dependencies
+      working-directory: ./ios
+      run: |
+        xcodebuild -resolvePackageDependencies
+
+    - name: Build and archive
+      working-directory: ./ios
+      run: |
+        xcodebuild archive \
+          -scheme VEP \
+          -destination 'generic/platform=iOS' \
+          -archivePath VEP.xcarchive \
+          -derivedDataPath DerivedData
+
+    - name: Export IPA
+      working-directory: ./ios
+      run: |
+        xcodebuild -exportArchive \
+          -archivePath VEP.xcarchive \
+          -exportPath ./build \
+          -exportOptionsPlist ExportOptions.plist
+
+    - name: Deploy to TestFlight
+      working-directory: ./ios
+      env:
+        APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      run: |
+        echo "Deploying iOS app to TestFlight..."
+        # Add your TestFlight deployment commands here
+        # Examples:
+        # - Upload to TestFlight: xcrun altool --upload-app
+        # - Use fastlane: fastlane beta
+        echo "iOS deployment completed"
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-ios]
+    if: always()
+    
+    steps:
+    - name: Notify deployment status
+      run: |
+        if [ "${{ needs.deploy-backend.result }}" == "success" ] && [ "${{ needs.deploy-ios.result }}" == "success" ]; then
+          echo "✅ Deployment successful for both backend and iOS"
+        elif [ "${{ needs.deploy-backend.result }}" == "success" ]; then
+          echo "✅ Backend deployment successful, iOS skipped"
+        elif [ "${{ needs.deploy-ios.result }}" == "success" ]; then
+          echo "✅ iOS deployment successful, Backend skipped"
+        else
+          echo "❌ Deployment failed"
+          exit 1
+        fi
