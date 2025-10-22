@@ -178,13 +178,10 @@ jobs:
             console.log(`Target status: ${targetStatusName}`);
             
             // Find the status option ID
-            const targetOption = statusField.options.find(o => 
-              o.name === targetStatusName || 
-              o.name === `🟠 ${targetStatusName}` ||
-              o.name === `🟡 ${targetStatusName}` ||
-              o.name === `👀 ${targetStatusName}` ||
-              o.name === `✅ ${targetStatusName}` ||
-              o.name === `🎉 ${targetStatusName}`
+            const emojis = ['🟠', '🟡', '👀', '✅', '🎉'];
+            const targetOption = statusField.options.find(o =>
+              o.name === targetStatusName ||
+              emojis.some(e => o.name === `${e} ${targetStatusName}`)
             );
             
             if (!targetOption) {
