@@ -19,134 +19,204 @@ jobs:
     - name: Update project card status
       uses: actions/github-script@v7
       with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const { issue, pull_request } = context.payload;
           const item = issue || pull_request;
           
-          if (!item) return;
+          if (!item) {
+            console.log('No item found in payload');
+            return;
+          }
           
-          // Get project information
+          console.log(`Processing ${context.eventName} event for ${item.number}`);
+          
+          // Get organization or user projects using Projects V2 API
+          const ownerType = context.payload.repository.owner.type;
+          const ownerQuery = ownerType === 'Organization' 
+            ? `organization(login: "${context.repo.owner}")`
+            : `user(login: "${context.repo.owner}")`;
+          
           const projectQuery = `
             query {
-              repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-                projects(first: 10) {
+              ${ownerQuery} {
+                projectsV2(first: 10) {
                   nodes {
                     id
-                    name
-                    columns(first: 10) {
+                    title
+                    number
+                  }
+                }
+              }
+            }
+          `;
+          
+          try {
+            const projectResult = await github.graphql(projectQuery);
+            const projects = ownerType === 'Organization' 
+              ? projectResult.organization.projectsV2.nodes
+              : projectResult.user.projectsV2.nodes;
+            
+            console.log('Available projects:', projects.map(p => p.title));
+            
+            const vepProject = projects.find(p => p.title.includes('VEP MVP'));
+            
+            if (!vepProject) {
+              console.log('VEP MVP project not found. Available projects:', projects.map(p => p.title));
+              return;
+            }
+            
+            console.log(`Found project: ${vepProject.title} (${vepProject.id})`);
+            
+            // Get the project fields (including Status field)
+            const projectFieldsQuery = `
+              query {
+                node(id: "${vepProject.id}") {
+                  ... on ProjectV2 {
+                    fields(first: 20) {
                       nodes {
-                        id
-                        name
+                        ... on ProjectV2Field {
+                          id
+                          name
+                        }
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                          options {
+                            id
+                            name
+                          }
+                        }
                       }
                     }
                   }
-                }
-              }
-            }
-          `;
-          
-          const projectResult = await github.graphql(projectQuery);
-          const projects = projectResult.repository.projects.nodes;
-          const vepProject = projects.find(p => p.name.includes('VEP MVP'));
-          
-          if (!vepProject) {
-            console.log('VEP MVP project not found');
-            return;
-          }
-          
-          // Get project columns - match exact column names with emojis
-          const columns = vepProject.columns.nodes;
-          console.log('Available columns:', columns.map(c => c.name));
-          
-          const readyColumn = columns.find(c => c.name === 'Ready');
-          const inProgressColumn = columns.find(c => c.name === 'In Progress');
-          const codeReviewColumn = columns.find(c => c.name === '👀 Code Review');
-          const testingColumn = columns.find(c => c.name === 'Testing');
-          const doneColumn = columns.find(c => c.name === '🎉 Done');
-          
-          console.log('Found columns:', {
-            ready: readyColumn?.name,
-            inProgress: inProgressColumn?.name,
-            codeReview: codeReviewColumn?.name,
-            testing: testingColumn?.name,
-            done: doneColumn?.name
-          });
-          
-          // Find the project card for this issue/PR
-          const cardQuery = `
-            query {
-              repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-                issue(number: ${item.number}) {
-                  projectItems(first: 10) {
-                    nodes {
-                      id
-                      project {
-                        id
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          `;
-          
-          const cardResult = await github.graphql(cardQuery);
-          const projectItems = cardResult.repository.issue.projectItems.nodes;
-          const vepProjectItem = projectItems.find(item => item.project.id === vepProject.id);
-          
-          if (!vepProjectItem) {
-            console.log('Project card not found for this issue');
-            return;
-          }
-          
-          // Determine which column to move to based on event
-          let targetColumn = null;
-          
-          if (context.eventName === 'issues') {
-            const { action, issue } = context.payload;
-            
-            if (action === 'assigned') {
-              targetColumn = inProgressColumn;
-            } else if (action === 'closed') {
-              targetColumn = doneColumn;
-            } else if (action === 'labeled' && context.payload.label.name === 'in-progress') {
-              targetColumn = inProgressColumn;
-            } else if (action === 'labeled' && context.payload.label.name === 'completed') {
-              targetColumn = doneColumn;
-            }
-          } else if (context.eventName === 'pull_request') {
-            const { action, pull_request } = context.payload;
-            
-            if (action === 'opened' || action === 'reopened') {
-              targetColumn = codeReviewColumn;
-            } else if (action === 'merged') {
-              targetColumn = testingColumn;
-            } else if (action === 'closed' && !pull_request.merged) {
-              targetColumn = readyColumn;
-            }
-          }
-          
-          if (targetColumn) {
-            // Move the project card
-            const moveCardMutation = `
-              mutation {
-                moveProjectCard(input: {
-                  cardId: "${vepProjectItem.id}",
-                  columnId: "${targetColumn.id}"
-                }) {
-                  clientMutationId
                 }
               }
             `;
             
-            try {
-              await github.graphql(moveCardMutation);
-              console.log(`Moved project card to ${targetColumn.name}`);
-            } catch (error) {
-              console.log(`Failed to move project card: ${error.message}`);
+            const fieldsResult = await github.graphql(projectFieldsQuery);
+            const fields = fieldsResult.node.fields.nodes;
+            
+            console.log('Available fields:', fields.map(f => f.name));
+            
+            const statusField = fields.find(f => f.name === 'Status');
+            
+            if (!statusField || !statusField.options) {
+              console.log('Status field not found or has no options');
+              return;
             }
-          } else {
-            console.log('Target column not found, available columns:', columns.map(c => c.name));
+            
+            console.log('Status field options:', statusField.options.map(o => o.name));
+            
+            // Find the project item for this issue/PR
+            const itemType = issue ? 'Issue' : 'PullRequest';
+            const itemQuery = `
+              query {
+                repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
+                  ${issue ? 'issue' : 'pullRequest'}(number: ${item.number}) {
+                    id
+                    projectItems(first: 10) {
+                      nodes {
+                        id
+                        project {
+                          id
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+            
+            const itemResult = await github.graphql(itemQuery);
+            const node = issue ? itemResult.repository.issue : itemResult.repository.pullRequest;
+            const projectItems = node.projectItems.nodes;
+            
+            console.log(`Found ${projectItems.length} project items for ${itemType} #${item.number}`);
+            
+            const vepProjectItem = projectItems.find(item => item.project.id === vepProject.id);
+            
+            if (!vepProjectItem) {
+              console.log(`Project item not found for ${itemType} #${item.number} in project ${vepProject.title}`);
+              return;
+            }
+            
+            console.log(`Found project item: ${vepProjectItem.id}`);
+            
+            // Determine which status to move to based on event
+            let targetStatusName = null;
+            
+            if (context.eventName === 'issues') {
+              const { action } = context.payload;
+              
+              if (action === 'assigned') {
+                targetStatusName = 'In Progress';
+              } else if (action === 'closed') {
+                targetStatusName = 'Done';
+              } else if (action === 'labeled' && context.payload.label.name === 'in-progress') {
+                targetStatusName = 'In Progress';
+              } else if (action === 'labeled' && context.payload.label.name === 'completed') {
+                targetStatusName = 'Done';
+              }
+            } else if (context.eventName === 'pull_request') {
+              const { action, pull_request } = context.payload;
+              
+              if (action === 'opened' || action === 'reopened') {
+                targetStatusName = 'Code Review';
+              } else if (action === 'closed' && context.payload.pull_request.merged) {
+                targetStatusName = 'Testing';
+              } else if (action === 'closed' && !context.payload.pull_request.merged) {
+                targetStatusName = 'Ready';
+              }
+            }
+            
+            if (!targetStatusName) {
+              console.log('No status change needed for this event');
+              return;
+            }
+            
+            console.log(`Target status: ${targetStatusName}`);
+            
+            // Find the status option ID
+            const emojis = ['🟠', '🟡', '👀', '✅', '🎉'];
+            const targetOption = statusField.options.find(o =>
+              o.name === targetStatusName ||
+              emojis.some(e => o.name === `${e} ${targetStatusName}`)
+            );
+            
+            if (!targetOption) {
+              console.log(`Status option '${targetStatusName}' not found. Available options:`, statusField.options.map(o => o.name));
+              return;
+            }
+            
+            console.log(`Found status option: ${targetOption.name} (${targetOption.id})`);
+            
+            // Update the project item status
+            const updateMutation = `
+              mutation {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: "${vepProject.id}"
+                  itemId: "${vepProjectItem.id}"
+                  fieldId: "${statusField.id}"
+                  value: {
+                    singleSelectOptionId: "${targetOption.id}"
+                  }
+                }) {
+                  projectV2Item {
+                    id
+                  }
+                }
+              }
+            `;
+            
+            await github.graphql(updateMutation);
+            console.log(`Successfully updated project item status to: ${targetOption.name}`);
+            
+          } catch (error) {
+            console.log(`Error: ${error.message}`);
+            if (error.errors) {
+              console.log('GraphQL errors:', JSON.stringify(error.errors, null, 2));
+            }
           }
 
   update-issue-dependencies:

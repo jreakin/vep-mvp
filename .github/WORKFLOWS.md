@@ -89,18 +89,26 @@ This repository includes comprehensive CI/CD workflows for the VEP MVP project, 
 - Project card events
 
 **Features:**
-- ✅ Auto-move project cards between columns
+- ✅ Auto-update project status using GitHub Projects V2 API
 - ✅ Auto-unblock dependent issues
 - ✅ Update issue status based on events
 - ✅ Update PROGRESS.md automatically
 - ✅ Dependency resolution
+- ✅ Support for both organization and user projects
 
 **Automation Rules:**
 - Issue assigned → Move to "In Progress"
-- PR created → Move to "Code Review"
+- PR created/reopened → Move to "Code Review"
 - PR merged → Move to "Testing"
+- PR closed (not merged) → Move back to "Ready"
 - Issue closed → Move to "Done"
 - Agent completed → Unblock dependent agents
+
+**Technical Details:**
+- Uses GitHub Projects V2 API (not Classic Projects)
+- Automatically detects organization vs. user projects
+- Supports status field with custom options
+- Handles emoji prefixes in status names (🟠, 🟡, 👀, ✅, 🎉)
 
 ### 5. Code Quality (`code-quality.yml`)
 
@@ -253,9 +261,11 @@ git push origin v1.0.0
 - Check health check endpoints
 
 **Project Automation Not Working:**
-- Verify GitHub token permissions
-- Check project board exists
-- Verify issue labels are correct
+- Verify workflow uses GitHub Projects V2 (not Classic Projects)
+- Ensure project board is owned by the repository owner (user or org)
+- Check that project name includes "VEP MVP"
+- Verify Status field exists with expected options
+- Check workflow logs for detailed error messages
 
 ### Debug Steps
 1. Check workflow logs in Actions tab
