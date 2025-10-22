@@ -69,7 +69,7 @@ A production-ready MVP for canvassing and voter engagement operations, built usi
 
 ## 🤖 Multi-Agent Development
 
-This project uses a unique **multi-agent development workflow** where 5 specialized AI agents build different components:
+This project uses a unique **multi-agent development workflow** where 5 specialized AI agents build different components. You can use either **Cursor IDE** or **GitHub Copilot** to invoke the agents:
 
 | Agent | Responsibility | Status | Estimated Time |
 |-------|---------------|--------|----------------|
@@ -94,6 +94,10 @@ Each agent:
 - ✅ Easier code review (smaller chunks)
 - ✅ Parallel development possible
 - ✅ Consistent code quality
+
+**Choose your development environment:**
+- 🖥️ **Cursor IDE** - [Quick Start Guide](QUICKSTART.md)
+- 🤖 **GitHub Copilot** - [Copilot Agent Instructions](.github/copilot/README.md)
 
 [Learn how to invoke agents →](QUICKSTART.md)
 
