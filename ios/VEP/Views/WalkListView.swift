@@ -252,14 +252,14 @@ struct WalkListView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
-            .disabled(viewModel.nextVoter == nil)
+            .disabled(!viewModel.hasNextVoter)
             
             Button(action: { viewModel.nextVoter() }) {
                 Label("Next", systemImage: "chevron.right")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
-            .disabled(viewModel.nextVoter == nil)
+            .disabled(!viewModel.hasNextVoter)
         }
         .padding()
         .background(Color(.systemGroupedBackground))
