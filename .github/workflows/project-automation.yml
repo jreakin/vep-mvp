@@ -163,9 +163,9 @@ jobs:
               
               if (action === 'opened' || action === 'reopened') {
                 targetStatusName = 'Code Review';
-              } else if (action === 'closed' && pull_request.merged) {
+              } else if (action === 'closed' && context.payload.pull_request.merged) {
                 targetStatusName = 'Testing';
-              } else if (action === 'closed' && !pull_request.merged) {
+              } else if (action === 'closed' && !context.payload.pull_request.merged) {
                 targetStatusName = 'Ready';
               }
             }
