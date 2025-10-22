@@ -1,24 +1,27 @@
-//
-//  WalkListViewModel.swift
-//  VEP
-//
-//  Created by Agent 3 on 2025-10-22.
-//
-
 import Foundation
+import SwiftUI
 import CoreLocation
-import Combine
 
-/// ViewModel for managing the walk list view with map navigation
+/// ViewModel for the walk list view (canvassing flow)
 @MainActor
 class WalkListViewModel: ObservableObject {
     @Published var assignment: Assignment
     @Published var currentVoterIndex = 0
     @Published var contactedVoters: Set<UUID> = []
-    @Published var isOnline = true
-    @Published var showingContactForm = false
-    @Published var mapRegion: MapRegion?
+    @Published var isLoggingContact = false
+    @Published var errorMessage: String?
     
+    private let apiClient = APIClient.shared
+    private let storage = OfflineStorageService.shared
+    private let syncService = SyncService.shared
+    private let locationService = LocationService.shared
+    
+    init(assignment: Assignment) {
+        self.assignment = assignment
+        loadContactedVoters()
+    }
+    
+    /// Current voter in the list
     var currentVoter: Voter? {
         guard let voters = assignment.voters,
               currentVoterIndex < voters.count else {
@@ -27,6 +30,7 @@ class WalkListViewModel: ObservableObject {
         return voters[currentVoterIndex]
     }
     
+    /// Next voter in the list
     var nextVoter: Voter? {
         guard let voters = assignment.voters,
               currentVoterIndex + 1 < voters.count else {
@@ -35,114 +39,174 @@ class WalkListViewModel: ObservableObject {
         return voters[currentVoterIndex + 1]
     }
     
-    var previousVoter: Voter? {
-        guard currentVoterIndex > 0,
-              let voters = assignment.voters,
-              currentVoterIndex - 1 < voters.count else {
-            return nil
-        }
-        return voters[currentVoterIndex - 1]
-    }
-    
+    /// Progress percentage (0.0 to 1.0)
     var progress: Double {
-        guard assignment.voterCount > 0 else { return 0 }
-        return Double(contactedVoters.count) / Double(assignment.voterCount)
-    }
-    
-    var progressPercentage: Int {
-        Int(progress * 100)
-    }
-    
-    var remainingVoters: Int {
-        assignment.voterCount - contactedVoters.count
-    }
-    
-    init(assignment: Assignment) {
-        self.assignment = assignment
-        
-        // Load assignment with voters if not already loaded
-        if assignment.voters == nil {
-            loadAssignmentDetails()
+        guard let voters = assignment.voters, !voters.isEmpty else {
+            return 0.0
         }
+        return Double(contactedVoters.count) / Double(voters.count)
     }
     
-    func loadAssignmentDetails() {
-        // For now, use mock data
-        // Agent 4 will replace this with real API calls
-        var updatedAssignment = assignment
-        updatedAssignment.voters = MockData.voters
-        self.assignment = updatedAssignment
-        
-        // Center map on first voter
-        if let firstVoter = updatedAssignment.voters?.first {
-            centerMapOnVoter(firstVoter)
-        }
+    /// Number of remaining voters
+    var remainingCount: Int {
+        guard let voters = assignment.voters else { return 0 }
+        return voters.count - contactedVoters.count
     }
     
+    /// Whether all voters have been contacted
+    var isComplete: Bool {
+        guard let voters = assignment.voters else { return false }
+        return contactedVoters.count == voters.count
+    }
+    
+    // MARK: - Navigation
+    
+    /// Move to next voter
     func nextVoter() {
         guard let voters = assignment.voters,
-              currentVoterIndex + 1 < voters.count else {
+              currentVoterIndex < voters.count - 1 else {
             return
         }
-        
         currentVoterIndex += 1
-        
-        if let voter = currentVoter {
-            centerMapOnVoter(voter)
-        }
     }
     
+    /// Move to previous voter
     func previousVoter() {
         guard currentVoterIndex > 0 else { return }
         currentVoterIndex -= 1
-        
-        if let voter = currentVoter {
-            centerMapOnVoter(voter)
-        }
     }
     
+    /// Jump to a specific voter
+    func jumpToVoter(index: Int) {
+        guard let voters = assignment.voters,
+              index >= 0 && index < voters.count else {
+            return
+        }
+        currentVoterIndex = index
+    }
+    
+    // MARK: - Contact Logging
+    
+    /// Log a contact for the current voter
+    func logContact(
+        contactType: ContactType,
+        result: String?,
+        supportLevel: Int?
+    ) async {
+        guard let voter = currentVoter else { return }
+        
+        isLoggingContact = true
+        errorMessage = nil
+        
+        // Get current location
+        let location = locationService.currentCoordinate ??
+            Coordinate(latitude: 0, longitude: 0)
+        
+        let contactLog = ContactLog(
+            assignmentId: assignment.id,
+            voterId: voter.id,
+            contactType: contactType,
+            result: result,
+            supportLevel: supportLevel,
+            location: location
+        )
+        
+        do {
+            if syncService.isOnline {
+                // Try to sync immediately if online
+                _ = try await apiClient.createContactLog(contactLog)
+            } else {
+                // Queue for later sync if offline
+                try storage.queueContactLog(contactLog)
+            }
+            
+            // Mark voter as contacted
+            contactedVoters.insert(voter.id)
+            saveContactedVoters()
+            
+            // Auto-advance to next voter
+            if !isComplete {
+                nextVoter()
+            } else {
+                // Mark assignment as completed
+                await markAssignmentComplete()
+            }
+            
+        } catch {
+            // Queue for sync even if API call failed
+            try? storage.queueContactLog(contactLog)
+            contactedVoters.insert(voter.id)
+            saveContactedVoters()
+            
+            errorMessage = "Contact logged offline: \(error.localizedDescription)"
+        }
+        
+        isLoggingContact = false
+    }
+    
+    /// Mark a voter as contacted without details
+    func markVoterContacted(_ voterId: UUID) {
+        contactedVoters.insert(voterId)
+        saveContactedVoters()
+    }
+    
+    /// Skip current voter
     func skipVoter() {
         nextVoter()
     }
     
-    func showContactForm() {
-        showingContactForm = true
+    // MARK: - Assignment Management
+    
+    /// Mark assignment as completed
+    private func markAssignmentComplete() async {
+        do {
+            if syncService.isOnline {
+                assignment = try await apiClient.updateAssignmentStatus(
+                    id: assignment.id,
+                    status: .completed
+                )
+            }
+            // Cache the updated status
+            try? storage.cacheAssignment(assignment)
+        } catch {
+            errorMessage = "Failed to mark assignment complete: \(error.localizedDescription)"
+        }
     }
     
-    func logContact(_ log: ContactLog) async {
-        // Mark voter as contacted
-        markVoterContacted(log.voterId)
-        
-        // Simulate API call
-        try? await Task.sleep(nanoseconds: 300_000_000)
-        
-        // Agent 4 will replace this with real API calls
-        // For now, just update local state
-        
-        // Move to next voter
-        showingContactForm = false
-        nextVoter()
+    // MARK: - Distance Calculations
+    
+    /// Distance to current voter in meters
+    func distanceToCurrentVoter() -> Double? {
+        guard let voter = currentVoter,
+              let currentLocation = locationService.currentCoordinate else {
+            return nil
+        }
+        return locationService.distance(from: currentLocation, to: voter.location)
     }
     
-    func markVoterContacted(_ voterId: UUID) {
-        contactedVoters.insert(voterId)
+    /// Distance to next voter in meters
+    func distanceToNextVoter() -> Double? {
+        guard let next = nextVoter,
+              let current = currentVoter else {
+            return nil
+        }
+        return locationService.distance(from: current.location, to: next.location)
     }
     
-    private func centerMapOnVoter(_ voter: Voter) {
-        mapRegion = MapRegion(
-            center: voter.location,
-            span: MapSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-        )
+    // MARK: - Persistence
+    
+    private func loadContactedVoters() {
+        let key = "contacted_voters_\(assignment.id.uuidString)"
+        if let data = UserDefaults.standard.data(forKey: key),
+           let ids = try? JSONDecoder().decode(Set<UUID>.self, from: data) {
+            contactedVoters = ids
+        }
     }
-}
-
-/// Map region helper
-struct MapRegion {
-    let center: Coordinate
-    let span: MapSpan
-}
-
-struct MapSpan {
-    let latitudeDelta: Double
-    let longitudeDelta: Double
+    
+    private func saveContactedVoters() {
+        let key = "contacted_voters_\(assignment.id.uuidString)"
+        if let data = try? JSONEncoder().encode(contactedVoters) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
+    }
 }

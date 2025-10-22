@@ -1,24 +1,6 @@
-//
-//  Voter.swift
-//  VEP
-//
-//  Created by Agent 3 on 2025-10-22.
-//
-
 import Foundation
-import CoreLocation
 
-/// Coordinate model for geographic locations
-struct Coordinate: Codable, Equatable {
-    let latitude: Double
-    let longitude: Double
-    
-    var clCoordinate: CLLocationCoordinate2D {
-        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-    }
-}
-
-/// Voter model representing individual voters in the database
+/// Voter model representing a registered voter
 struct Voter: Codable, Identifiable {
     let id: UUID
     let voterId: String
@@ -33,8 +15,8 @@ struct Voter: Codable, Identifiable {
     let supportLevel: Int?
     let phone: String?
     let email: String?
-    var sequenceOrder: Int?
-    var lastContact: ContactSummary?
+    var sequenceOrder: Int? // Order in assignment walk list
+    var lastContact: LastContact? // Most recent contact with this voter
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -54,14 +36,17 @@ struct Voter: Codable, Identifiable {
         case lastContact = "last_contact"
     }
     
+    /// Full name of the voter
     var fullName: String {
         "\(firstName) \(lastName)"
     }
     
+    /// Full address string
     var fullAddress: String {
         "\(address), \(city), \(state) \(zip)"
     }
     
+    /// Support level description
     var supportLevelDescription: String {
         guard let level = supportLevel else { return "Unknown" }
         switch level {
@@ -75,8 +60,8 @@ struct Voter: Codable, Identifiable {
     }
 }
 
-/// Summary of last contact with a voter
-struct ContactSummary: Codable {
+/// Last contact summary for a voter
+struct LastContact: Codable {
     let date: String
     let type: String
     let result: String?

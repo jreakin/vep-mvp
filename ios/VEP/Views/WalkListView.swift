@@ -12,6 +12,7 @@ import MapKit
 struct WalkListView: View {
     @StateObject private var viewModel: WalkListViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var showingContactForm = false
     
     init(assignment: Assignment) {
         _viewModel = StateObject(wrappedValue: WalkListViewModel(assignment: assignment))
@@ -40,14 +41,18 @@ struct WalkListView: View {
             }
             
             // Contact form sheet
-            if viewModel.showingContactForm, let voter = viewModel.currentVoter {
+            if showingContactForm, let voter = viewModel.currentVoter {
                 ContactLogView(
                     assignment: viewModel.assignment,
                     voter: voter,
-                    isPresented: $viewModel.showingContactForm,
+                    isPresented: $showingContactForm,
                     onSubmit: { log in
                         Task {
-                            await viewModel.logContact(log)
+                            await viewModel.logContact(
+                                contactType: log.contactType,
+                                result: log.result,
+                                supportLevel: log.supportLevel
+                            )
                         }
                     }
                 )
@@ -72,7 +77,7 @@ struct WalkListView: View {
                 
                 Spacer()
                 
-                Text("\(viewModel.progressPercentage)%")
+                Text("\(Int(viewModel.progress * 100))%")
                     .font(.headline)
                     .foregroundColor(.blue)
             }
@@ -192,7 +197,7 @@ struct WalkListView: View {
             }
             
             // Log contact button
-            Button(action: { viewModel.showContactForm() }) {
+            Button(action: { showingContactForm = true }) {
                 Label("Log Contact", systemImage: "checkmark.circle.fill")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
@@ -240,7 +245,7 @@ struct WalkListView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
-            .disabled(viewModel.previousVoter == nil)
+            .disabled(viewModel.currentVoterIndex == 0)
             
             Button(action: { viewModel.skipVoter() }) {
                 Label("Skip", systemImage: "forward.fill")

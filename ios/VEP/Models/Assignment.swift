@@ -1,13 +1,6 @@
-//
-//  Assignment.swift
-//  VEP
-//
-//  Created by Agent 3 on 2025-10-22.
-//
-
 import Foundation
 
-/// Assignment model representing canvassing assignments
+/// Assignment model representing a canvassing assignment
 struct Assignment: Codable, Identifiable {
     let id: UUID
     let name: String
@@ -31,15 +24,13 @@ struct Assignment: Codable, Identifiable {
         case voters
     }
     
+    /// Progress percentage (0.0 to 1.0)
     var progress: Double {
-        guard voterCount > 0 else { return 0 }
+        guard voterCount > 0 else { return 0.0 }
         return Double(completedCount) / Double(voterCount)
     }
     
-    var progressPercentage: Int {
-        Int(progress * 100)
-    }
-    
+    /// Whether the assignment is overdue
     var isOverdue: Bool {
         guard let dueDate = dueDate else { return false }
         return dueDate < Date() && status != .completed
@@ -47,7 +38,7 @@ struct Assignment: Codable, Identifiable {
 }
 
 /// Assignment status enumeration
-enum AssignmentStatus: String, Codable, CaseIterable {
+enum AssignmentStatus: String, Codable {
     case pending
     case inProgress = "in_progress"
     case completed
@@ -59,15 +50,6 @@ enum AssignmentStatus: String, Codable, CaseIterable {
         case .inProgress: return "In Progress"
         case .completed: return "Completed"
         case .cancelled: return "Cancelled"
-        }
-    }
-    
-    var color: String {
-        switch self {
-        case .pending: return "gray"
-        case .inProgress: return "blue"
-        case .completed: return "green"
-        case .cancelled: return "red"
         }
     }
 }

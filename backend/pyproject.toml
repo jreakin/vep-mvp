@@ -16,6 +16,7 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
     "python-multipart>=0.0.6",
+    "email-validator>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -42,7 +43,14 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --cov=app --cov-report=html --cov-report=term"
+addopts = "-v --cov=app --cov-report=html --cov-report=term --cov-report=xml"
+markers = [
+    "unit: Unit tests (fast, no external dependencies)",
+    "integration: Integration tests (require database)",
+    "api: API endpoint tests",
+    "auth: Authentication and authorization tests",
+    "slow: Slow running tests (performance, large datasets)",
+]
 
 [tool.black]
 line-length = 100

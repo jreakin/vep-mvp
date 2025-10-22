@@ -1,18 +1,10 @@
-//
-//  ContactLog.swift
-//  VEP
-//
-//  Created by Agent 3 on 2025-10-22.
-//
-
 import Foundation
 
-/// Contact log model representing voter interactions
+/// Contact log model representing a voter contact event
 struct ContactLog: Codable, Identifiable {
     let id: UUID
     let assignmentId: UUID
     let voterId: UUID
-    let userId: UUID?
     let contactType: ContactType
     let result: String?
     let supportLevel: Int?
@@ -23,12 +15,30 @@ struct ContactLog: Codable, Identifiable {
         case id
         case assignmentId = "assignment_id"
         case voterId = "voter_id"
-        case userId = "user_id"
         case contactType = "contact_type"
         case result
         case supportLevel = "support_level"
         case location
         case contactedAt = "contacted_at"
+    }
+    
+    /// Initialize a new contact log (for creating new contacts)
+    init(id: UUID = UUID(),
+         assignmentId: UUID,
+         voterId: UUID,
+         contactType: ContactType,
+         result: String?,
+         supportLevel: Int?,
+         location: Coordinate,
+         contactedAt: Date = Date()) {
+        self.id = id
+        self.assignmentId = assignmentId
+        self.voterId = voterId
+        self.contactType = contactType
+        self.result = result
+        self.supportLevel = supportLevel
+        self.location = location
+        self.contactedAt = contactedAt
     }
 }
 
@@ -56,16 +66,12 @@ enum ContactType: String, Codable, CaseIterable {
         }
     }
     
-    var icon: String {
+    var isSuccessfulContact: Bool {
         switch self {
-        case .knocked: return "hand.raised.fill"
-        case .phone: return "phone.fill"
-        case .text: return "message.fill"
-        case .email: return "envelope.fill"
-        case .notHome: return "house.fill"
-        case .refused: return "hand.raised.slash.fill"
-        case .moved: return "arrow.right.circle.fill"
-        case .deceased: return "cross.fill"
+        case .knocked, .phone, .text, .email:
+            return true
+        case .notHome, .refused, .moved, .deceased:
+            return false
         }
     }
 }

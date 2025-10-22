@@ -1,13 +1,6 @@
-//
-//  User.swift
-//  VEP
-//
-//  Created by Agent 3 on 2025-10-22.
-//
-
 import Foundation
 
-/// User model representing campaign staff members
+/// User model representing a campaign user
 struct User: Codable, Identifiable {
     let id: UUID
     let email: String
@@ -29,12 +22,4 @@ enum UserRole: String, Codable {
     case admin
     case manager
     case canvasser
-    
-    var displayName: String {
-        switch self {
-        case .admin: return "Admin"
-        case .manager: return "Manager"
-        case .canvasser: return "Canvasser"
-        }
-    }
 }

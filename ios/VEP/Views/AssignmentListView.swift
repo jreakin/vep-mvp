@@ -29,10 +29,7 @@ struct AssignmentListView: View {
                 }
             }
             .navigationTitle("Assignments")
-            .searchable(text: Binding(
-                get: { viewModel.searchText },
-                set: { viewModel.updateSearchText($0) }
-            ), prompt: "Search assignments")
+            .searchable(text: $viewModel.searchText, prompt: "Search assignments")
             .refreshable {
                 await viewModel.refreshAssignments()
             }
@@ -70,7 +67,7 @@ struct AssignmentListView: View {
     }
     
     private var assignmentList: some View {
-        List(viewModel.assignments) { assignment in
+        List(viewModel.filteredAssignments) { assignment in
             NavigationLink(destination: AssignmentDetailView(assignment: assignment)) {
                 AssignmentRow(assignment: assignment)
             }

@@ -1,114 +1,107 @@
-//
-//  ContactLogViewModel.swift
-//  VEP
-//
-//  Created by Agent 3 on 2025-10-22.
-//
-
 import Foundation
-import CoreLocation
-import Combine
+import SwiftUI
 
-/// ViewModel for managing contact log form
+/// ViewModel for contact log form
 @MainActor
 class ContactLogViewModel: ObservableObject {
-    @Published var contactType: ContactType = .knocked
+    @Published var selectedContactType: ContactType = .knocked
     @Published var result: String = ""
     @Published var supportLevel: Int?
     @Published var isSubmitting = false
     @Published var errorMessage: String?
     
-    let assignment: Assignment
     let voter: Voter
-    private let locationService: LocationService
+    let assignmentId: UUID
     
-    var isValid: Bool {
-        // Contact type is always selected (has default)
-        // Result is optional
+    private let apiClient = APIClient.shared
+    private let storage = OfflineStorageService.shared
+    private let syncService = SyncService.shared
+    private let locationService = LocationService.shared
+    
+    var onSuccess: (() -> Void)?
+    
+    init(voter: Voter, assignmentId: UUID) {
+        self.voter = voter
+        self.assignmentId = assignmentId
+    }
+    
+    /// Whether the form is valid and can be submitted
+    var canSubmit: Bool {
+        // For successful contacts, require either result or support level
+        if selectedContactType.isSuccessfulContact {
+            return !result.isEmpty || supportLevel != nil
+        }
+        // For unsuccessful contacts, no additional data required
         return true
     }
     
-    init(assignment: Assignment, voter: Voter, locationService: LocationService = LocationService.shared) {
-        self.assignment = assignment
-        self.voter = voter
-        self.locationService = locationService
-    }
-    
-    func submitContactLog() async throws -> ContactLog {
-        guard isValid else {
-            throw ContactLogError.invalidData
-        }
+    /// Submit the contact log
+    func submit() async {
+        guard canSubmit else { return }
         
         isSubmitting = true
         errorMessage = nil
         
-        defer { isSubmitting = false }
+        // Get current location
+        let location = locationService.currentCoordinate ??
+            Coordinate(latitude: 0, longitude: 0)
         
-        // Get current location or use voter's location as fallback
-        let location = locationService.currentLocation ?? voter.location
-        
-        // Create contact log
-        let log = ContactLog(
-            id: UUID(),
-            assignmentId: assignment.id,
+        let contactLog = ContactLog(
+            assignmentId: assignmentId,
             voterId: voter.id,
-            userId: nil, // Will be set by backend based on auth token
-            contactType: contactType,
+            contactType: selectedContactType,
             result: result.isEmpty ? nil : result,
             supportLevel: supportLevel,
-            location: location,
-            contactedAt: Date()
+            location: location
         )
         
-        // Simulate API call
-        try await Task.sleep(nanoseconds: 300_000_000)
+        do {
+            if syncService.isOnline {
+                // Try to submit immediately
+                _ = try await apiClient.createContactLog(contactLog)
+            } else {
+                // Queue for later sync
+                try storage.queueContactLog(contactLog)
+            }
+            
+            // Success - call completion handler
+            onSuccess?()
+            
+        } catch {
+            // Queue for sync even if API failed
+            try? storage.queueContactLog(contactLog)
+            errorMessage = "Contact logged offline: \(error.localizedDescription)"
+            
+            // Still call success after a delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                self.onSuccess?()
+            }
+        }
         
-        // Agent 4 will replace this with real API calls
-        return log
+        isSubmitting = false
     }
     
-    func clearForm() {
-        contactType = .knocked
+    /// Clear the form
+    func clear() {
+        selectedContactType = .knocked
         result = ""
         supportLevel = nil
         errorMessage = nil
     }
-}
-
-/// Location service mock for getting current user location
-class LocationService {
-    static let shared = LocationService()
     
-    @Published var currentLocation: Coordinate?
+    /// Quick contact types (for buttons)
+    let quickContactTypes: [ContactType] = [
+        .knocked,
+        .notHome,
+        .refused
+    ]
     
-    private init() {
-        // Mock current location - Austin, TX
-        currentLocation = Coordinate(latitude: 30.2672, longitude: -97.7431)
-    }
-    
-    func requestLocationPermission() {
-        // Will be implemented by Agent 4
-    }
-    
-    func startUpdatingLocation() {
-        // Will be implemented by Agent 4
-    }
-    
-    func stopUpdatingLocation() {
-        // Will be implemented by Agent 4
-    }
-}
-
-enum ContactLogError: LocalizedError {
-    case invalidData
-    case networkError
-    case unauthorized
-    
-    var errorDescription: String? {
-        switch self {
-        case .invalidData: return "Please fill in all required fields"
-        case .networkError: return "Network error. Your contact will be synced when connection is restored."
-        case .unauthorized: return "You are not authorized to perform this action"
-        }
-    }
+    /// Support level options
+    let supportLevels: [(Int, String, String)] = [
+        (1, "Strong Opponent", "😠"),
+        (2, "Lean Opponent", "😕"),
+        (3, "Undecided", "😐"),
+        (4, "Lean Support", "🙂"),
+        (5, "Strong Support", "😄")
+    ]
 }
