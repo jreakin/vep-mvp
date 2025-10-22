@@ -435,7 +435,7 @@ In Xcode:
 
 ### Metrics Measured
 
-- **Scroll Decceleration**: List scrolling smoothness
+- **Scroll Deceleration**: List scrolling smoothness
 - **Launch Metric**: App launch time
 - **Memory**: Memory usage during operations
 - **Animation**: UI animation performance
