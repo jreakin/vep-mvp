@@ -54,13 +54,23 @@ jobs:
             return;
           }
           
-          // Get project columns
+          // Get project columns - match exact column names
           const columns = vepProject.columns.nodes;
-          const readyColumn = columns.find(c => c.name.includes('Ready'));
-          const inProgressColumn = columns.find(c => c.name.includes('In Progress'));
-          const codeReviewColumn = columns.find(c => c.name.includes('Code Review'));
-          const testingColumn = columns.find(c => c.name.includes('Testing'));
-          const doneColumn = columns.find(c => c.name.includes('Done'));
+          console.log('Available columns:', columns.map(c => c.name));
+          
+          const readyColumn = columns.find(c => c.name === 'Ready');
+          const inProgressColumn = columns.find(c => c.name === 'In Progress');
+          const codeReviewColumn = columns.find(c => c.name === 'Code Review');
+          const testingColumn = columns.find(c => c.name === 'Testing');
+          const doneColumn = columns.find(c => c.name === 'Done');
+          
+          console.log('Found columns:', {
+            ready: readyColumn?.name,
+            inProgress: inProgressColumn?.name,
+            codeReview: codeReviewColumn?.name,
+            testing: testingColumn?.name,
+            done: doneColumn?.name
+          });
           
           // Find the project card for this issue/PR
           const cardQuery = `
@@ -129,8 +139,14 @@ jobs:
               }
             `;
             
-            await github.graphql(moveCardMutation);
-            console.log(`Moved project card to ${targetColumn.name}`);
+            try {
+              await github.graphql(moveCardMutation);
+              console.log(`Moved project card to ${targetColumn.name}`);
+            } catch (error) {
+              console.log(`Failed to move project card: ${error.message}`);
+            }
+          } else {
+            console.log('Target column not found, available columns:', columns.map(c => c.name));
           }
 
   update-issue-dependencies:
