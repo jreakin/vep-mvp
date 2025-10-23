@@ -7,6 +7,12 @@ on:
     types: [opened, closed, merged]
   workflow_dispatch:
 
+permissions:
+  issues: write
+  pull-requests: write
+  projects: write
+  contents: read
+
 jobs:
   automate-project:
     runs-on: ubuntu-latest
