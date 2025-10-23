@@ -1,0 +1,142 @@
+name: GitHub CLI Project Automation Examples
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'status-report'
+        type: choice
+        options:
+        - status-report
+        - add-all-issues
+        - create-milestone-items
+        - cleanup-completed
+        - sync-labels
+
+permissions:
+  issues: write
+  pull-requests: write
+  projects: write
+  contents: write
+
+env:
+  PROJECT_ID: "4"
+  PROJECT_OWNER: "jreakin"
+
+jobs:
+  project-automation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup GitHub CLI
+      uses: actions/setup-gh@v1
+
+    - name: Authenticate
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+    - name: Status Report
+      if: github.event.inputs.action == 'status-report'
+      run: |
+        echo "# Project Status Report" > report.md
+        echo "Generated: $(date)" >> report.md
+        echo "" >> report.md
+        
+        echo "## Project Overview" >> report.md
+        gh project view ${{ env.PROJECT_ID }} --owner ${{ env.PROJECT_OWNER }} >> report.md
+        echo "" >> report.md
+        
+        echo "## Items by Status" >> report.md
+        gh project item-list ${{ env.PROJECT_ID }} --owner ${{ env.PROJECT_OWNER }} --format json | \
+          jq -r 'group_by(.fieldValues[0].name) | to_entries[] | "### \(.key)\n\(.value | length) items\n"' >> report.md
+        
+        echo "## Recent Issues" >> report.md
+        gh issue list --repo ${{ github.repository }} --state all --limit 5 --format table >> report.md
+        
+        cat report.md
+
+    - name: Add All Issues to Project
+      if: github.event.inputs.action == 'add-all-issues'
+      run: |
+        echo "Adding all open issues to project..."
+        gh issue list --repo ${{ github.repository }} --state open --json number | \
+          jq -r '.[].number' | while read -r issue_num; do
+            echo "Adding issue #$issue_num"
+            gh project item-add ${{ env.PROJECT_ID }} --owner ${{ env.PROJECT_OWNER }} \
+              --url "https://github.com/${{ github.repository }}/issues/$issue_num" || true
+          done
+
+    - name: Create Milestone Items
+      if: github.event.inputs.action == 'create-milestone-items'
+      run: |
+        echo "Creating project items for milestones..."
+        
+        # Create a milestone item
+        gh project item-create ${{ env.PROJECT_ID }} --owner ${{ env.PROJECT_OWNER }} \
+          --title "Q1 2024: Core Features Complete" \
+          --body "All core VEP features implemented and tested"
+        
+        # Create another milestone
+        gh project item-create ${{ env.PROJECT_ID }} --owner ${{ env.PROJECT_OWNER }} \
+          --title "Q2 2024: Performance Optimization" \
+          --body "Focus on app performance and user experience improvements"
+
+    - name: Cleanup Completed Items
+      if: github.event.inputs.action == 'cleanup-completed'
+      run: |
+        echo "Archiving completed items..."
+        
+        # Get all items with "Done" status
+        COMPLETED_ITEMS=$(gh project item-list ${{ env.PROJECT_ID }} --owner ${{ env.PROJECT_OWNER }} --format json | \
+          jq -r '.[] | select(.fieldValues[0].name == "Done" or .fieldValues[0].name == "✅ Done") | .id')
+        
+        echo "$COMPLETED_ITEMS" | while read -r item_id; do
+          if [ -n "$item_id" ]; then
+            echo "Archiving item: $item_id"
+            gh project item-archive "$item_id" --owner ${{ env.PROJECT_OWNER }} || true
+          fi
+        done
+
+    - name: Sync Labels with Project Status
+      if: github.event.inputs.action == 'sync-labels'
+      run: |
+        echo "Syncing issue labels with project status..."
+        
+        # Get all project items
+        gh project item-list ${{ env.PROJECT_ID }} --owner ${{ env.PROJECT_OWNER }} --format json | \
+          jq -r '.[] | select(.content.__typename == "Issue") | "\(.content.number) \(.fieldValues[0].name)"' | \
+          while read -r issue_num status; do
+            if [ -n "$issue_num" ] && [ -n "$status" ]; then
+              echo "Syncing issue #$issue_num with status: $status"
+              
+              # Remove existing status labels
+              gh issue edit "$issue_num" --remove-label "in-progress,completed,ready,testing" || true
+              
+              # Add appropriate label based on status
+              case "$status" in
+                *"In Progress"*)
+                  gh issue edit "$issue_num" --add-label "in-progress"
+                  ;;
+                *"Done"*)
+                  gh issue edit "$issue_num" --add-label "completed"
+                  ;;
+                *"Code Review"*)
+                  gh issue edit "$issue_num" --add-label "review"
+                  ;;
+                *"Testing"*)
+                  gh issue edit "$issue_num" --add-label "testing"
+                  ;;
+              esac
+            fi
+          done
+
+    - name: Create Summary Comment
+      if: always()
+      run: |
+        echo "✅ GitHub CLI project automation completed successfully!"
+        echo "Action: ${{ github.event.inputs.action }}"
+        echo "Project: ${{ env.PROJECT_OWNER }}/${{ env.PROJECT_ID }}"

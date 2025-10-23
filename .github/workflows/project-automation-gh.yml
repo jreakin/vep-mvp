@@ -1,0 +1,229 @@
+name: Project Automation with GitHub CLI
+
+on:
+  issues:
+    types: [opened, closed, assigned, unassigned, labeled, unlabeled]
+  pull_request:
+    types: [opened, closed, merged, reopened, labeled, unlabeled]
+  workflow_dispatch: # Allow manual triggering
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: write
+  projects: write
+
+env:
+  PROJECT_ID: "4"  # VEP MVP - Multi-Agent Development project ID
+  PROJECT_OWNER: "jreakin"
+
+jobs:
+  update-project-status:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' || github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup GitHub CLI
+      uses: actions/setup-gh@v1
+      with:
+        version: latest
+
+    - name: Authenticate with GitHub CLI
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+        gh auth status
+
+    - name: Get project information
+      run: |
+        echo "Project ID: ${{ env.PROJECT_ID }}"
+        echo "Project Owner: ${{ env.PROJECT_OWNER }}"
+        gh project view ${{ env.PROJECT_ID }} --owner ${{ env.PROJECT_OWNER }}
+
+    - name: Add issue/PR to project if not already added
+      run: |
+        if [ "${{ github.event_name }}" = "issues" ]; then
+          ITEM_URL="https://github.com/${{ github.repository }}/issues/${{ github.event.issue.number }}"
+        else
+          ITEM_URL="https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+        fi
+        
+        echo "Adding item to project: $ITEM_URL"
+        gh project item-add ${{ env.PROJECT_ID }} --owner ${{ env.PROJECT_OWNER }} --url "$ITEM_URL" || echo "Item may already be in project"
+
+    - name: Update project item status based on event
+      run: |
+        # Get the project item ID for this issue/PR
+        if [ "${{ github.event_name }}" = "issues" ]; then
+          ITEM_NUMBER="${{ github.event.issue.number }}"
+          ITEM_TYPE="issue"
+        else
+          ITEM_NUMBER="${{ github.event.pull_request.number }}"
+          ITEM_TYPE="pull_request"
+        fi
+        
+        # Get the project item ID
+        ITEM_ID=$(gh project item-list ${{ env.PROJECT_ID }} --owner ${{ env.PROJECT_OWNER }} --format json | jq -r --arg repo "${{ github.repository }}" --arg num "$ITEM_NUMBER" '.[] | select(.content.repository.nameWithOwner == $repo and (.content.number == ($num | tonumber))) | .id')
+        
+        if [ -z "$ITEM_ID" ] || [ "$ITEM_ID" = "null" ]; then
+          echo "Could not find project item for $ITEM_TYPE #$ITEM_NUMBER"
+          exit 0
+        fi
+        
+        echo "Found project item ID: $ITEM_ID"
+        
+        # Determine target status based on event
+        TARGET_STATUS=""
+        
+        if [ "${{ github.event_name }}" = "issues" ]; then
+          case "${{ github.event.action }}" in
+            "assigned")
+              TARGET_STATUS="In Progress"
+              ;;
+            "closed")
+              TARGET_STATUS="Done"
+              ;;
+            "labeled")
+              if [ "${{ github.event.label.name }}" = "in-progress" ]; then
+                TARGET_STATUS="In Progress"
+              elif [ "${{ github.event.label.name }}" = "completed" ]; then
+                TARGET_STATUS="Done"
+              fi
+              ;;
+          esac
+        elif [ "${{ github.event_name }}" = "pull_request" ]; then
+          case "${{ github.event.action }}" in
+            "opened"|"reopened")
+              TARGET_STATUS="Code Review"
+              ;;
+            "closed")
+              if [ "${{ github.event.pull_request.merged }}" = "true" ]; then
+                TARGET_STATUS="Testing"
+              else
+                TARGET_STATUS="Ready"
+              fi
+              ;;
+          esac
+        fi
+        
+        if [ -n "$TARGET_STATUS" ]; then
+          echo "Updating status to: $TARGET_STATUS"
+          
+          # Get the status field ID and options
+          STATUS_FIELD_ID=$(gh project field-list ${{ env.PROJECT_ID }} --owner ${{ env.PROJECT_OWNER }} --format json | jq -r '.[] | select(.name == "Status") | .id')
+          
+          if [ -n "$STATUS_FIELD_ID" ] && [ "$STATUS_FIELD_ID" != "null" ]; then
+            # Update the item status
+            gh project item-edit "$ITEM_ID" --owner ${{ env.PROJECT_OWNER }} --field-id "$STATUS_FIELD_ID" --single-select-option-id "$TARGET_STATUS" || echo "Status update failed, trying with emoji variations"
+            
+            # Try with common emoji variations if the first attempt failed
+            for emoji in "🟠" "🟡" "👀" "✅" "🎉" "🚀" "🧪" "↩️"; do
+              gh project item-edit "$ITEM_ID" --owner ${{ env.PROJECT_OWNER }} --field-id "$STATUS_FIELD_ID" --single-select-option-id "$emoji $TARGET_STATUS" && break
+            done
+            
+            echo "✅ Project item status updated successfully"
+          else
+            echo "❌ Could not find Status field in project"
+          fi
+        else
+          echo "ℹ️ No status change needed for this event"
+        fi
+
+    - name: Add confirmation comment
+      if: always()
+      run: |
+        if [ "${{ github.event_name }}" = "issues" ]; then
+          ITEM_NUMBER="${{ github.event.issue.number }}"
+        else
+          ITEM_NUMBER="${{ github.event.pull_request.number }}"
+        fi
+        
+        gh issue comment "$ITEM_NUMBER" --body "🎯 **Project Board Updated**: This item has been automatically updated in the project board."
+
+  create-project-summary:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'closed'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup GitHub CLI
+      uses: actions/setup-gh@v1
+      with:
+        version: latest
+
+    - name: Authenticate with GitHub CLI
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+    - name: Check if this is an agent issue
+      id: check-agent
+      run: |
+        AGENT_LABELS=$(echo '${{ github.event.issue.labels }}' | jq -r '.[] | select(.name | startswith("agent-")) | .name')
+        if [ -n "$AGENT_LABELS" ]; then
+          echo "is_agent=true" >> $GITHUB_OUTPUT
+          echo "agent_number=$(echo $AGENT_LABELS | head -1 | cut -d'-' -f2)" >> $GITHUB_OUTPUT
+        else
+          echo "is_agent=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Notify dependent issues
+      if: steps.check-agent.outputs.is_agent == 'true'
+      run: |
+        AGENT_NUMBER="${{ steps.check-agent.outputs.agent_number }}"
+        ISSUE_NUMBER="${{ github.event.issue.number }}"
+        
+        echo "Agent $AGENT_NUMBER (Issue #$ISSUE_NUMBER) completed. Checking for dependent issues..."
+        
+        # Find issues that might depend on this agent
+        DEPENDENT_ISSUES=$(gh issue list --repo ${{ github.repository }} --state open --label "blocked" --json number,title,body)
+        
+        echo "$DEPENDENT_ISSUES" | jq -r '.[] | select(.body | contains("Agent '"$AGENT_NUMBER"'") or contains("#'"$ISSUE_NUMBER"'")) | .number' | while read -r dep_issue; do
+          if [ -n "$dep_issue" ]; then
+            echo "Notifying dependent issue #$dep_issue"
+            gh issue comment "$dep_issue" --body "🎉 **Dependency Resolved**: Agent $AGENT_NUMBER (Issue #$ISSUE_NUMBER) has been completed. This issue is now ready to start!"
+          fi
+        done
+
+  weekly-project-report:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup GitHub CLI
+      uses: actions/setup-gh@v1
+      with:
+        version: latest
+
+    - name: Authenticate with GitHub CLI
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+    - name: Generate project report
+      run: |
+        echo "# VEP MVP Project Status Report" > project-report.md
+        echo "Generated: $(date)" >> project-report.md
+        echo "" >> project-report.md
+        
+        echo "## Project Overview" >> project-report.md
+        gh project view ${{ env.PROJECT_ID }} --owner ${{ env.PROJECT_OWNER }} >> project-report.md
+        echo "" >> project-report.md
+        
+        echo "## Current Items" >> project-report.md
+        gh project item-list ${{ env.PROJECT_ID }} --owner ${{ env.PROJECT_OWNER }} --format table >> project-report.md
+        echo "" >> project-report.md
+        
+        echo "## Recent Activity" >> project-report.md
+        gh issue list --repo ${{ github.repository }} --state all --limit 10 --format table >> project-report.md
+        
+        cat project-report.md
+
+    - name: Create report issue
+      run: |
+        gh issue create --title "Weekly Project Report - $(date +%Y-%m-%d)" --body-file project-report.md --label "report,automation"

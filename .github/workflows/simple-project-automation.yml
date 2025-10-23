@@ -1,0 +1,105 @@
+name: Simple Project Automation with gh CLI
+
+on:
+  issues:
+    types: [opened, closed, assigned, labeled]
+  pull_request:
+    types: [opened, closed, merged]
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+  projects: write
+
+env:
+  PROJECT_ID: "4"
+  PROJECT_OWNER: "jreakin"
+
+jobs:
+  automate-project:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup GitHub CLI
+      uses: actions/setup-gh@v1
+
+    - name: Authenticate
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+    - name: Add item to project
+      run: |
+        if [ "${{ github.event_name }}" = "issues" ]; then
+          URL="https://github.com/${{ github.repository }}/issues/${{ github.event.issue.number }}"
+        else
+          URL="https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+        fi
+        
+        # Add to project (will fail silently if already added)
+        gh project item-add ${{ env.PROJECT_ID }} --owner ${{ env.PROJECT_OWNER }} --url "$URL" || true
+
+    - name: Update status based on event
+      run: |
+        # Get item ID
+        if [ "${{ github.event_name }}" = "issues" ]; then
+          ITEM_NUM="${{ github.event.issue.number }}"
+        else
+          ITEM_NUM="${{ github.event.pull_request.number }}"
+        fi
+        
+        # Find the project item
+        ITEM_ID=$(gh project item-list ${{ env.PROJECT_ID }} --owner ${{ env.PROJECT_OWNER }} --format json | \
+          jq -r --arg repo "${{ github.repository }}" --arg num "$ITEM_NUM" \
+          '.[] | select(.content.repository.nameWithOwner == $repo and (.content.number == ($num | tonumber))) | .id')
+        
+        if [ -z "$ITEM_ID" ] || [ "$ITEM_ID" = "null" ]; then
+          echo "Item not found in project"
+          exit 0
+        fi
+        
+        # Determine new status
+        NEW_STATUS=""
+        case "${{ github.event_name }}-${{ github.event.action }}" in
+          "issues-assigned"|"issues-labeled")
+            NEW_STATUS="In Progress"
+            ;;
+          "issues-closed")
+            NEW_STATUS="Done"
+            ;;
+          "pull_request-opened")
+            NEW_STATUS="Code Review"
+            ;;
+          "pull_request-closed")
+            if [ "${{ github.event.pull_request.merged }}" = "true" ]; then
+              NEW_STATUS="Testing"
+            else
+              NEW_STATUS="Ready"
+            fi
+            ;;
+        esac
+        
+        if [ -n "$NEW_STATUS" ]; then
+          # Get status field ID
+          STATUS_FIELD=$(gh project field-list ${{ env.PROJECT_ID }} --owner ${{ env.PROJECT_OWNER }} --format json | \
+            jq -r '.[] | select(.name == "Status") | .id')
+          
+          if [ -n "$STATUS_FIELD" ]; then
+            # Update status (try different emoji variations)
+            gh project item-edit "$ITEM_ID" --owner ${{ env.PROJECT_OWNER }} \
+              --field-id "$STATUS_FIELD" --single-select-option-id "$NEW_STATUS" || \
+            gh project item-edit "$ITEM_ID" --owner ${{ env.PROJECT_OWNER }} \
+              --field-id "$STATUS_FIELD" --single-select-option-id "🟠 $NEW_STATUS" || \
+            gh project item-edit "$ITEM_ID" --owner ${{ env.PROJECT_OWNER }} \
+              --field-id "$STATUS_FIELD" --single-select-option-id "✅ $NEW_STATUS"
+            
+            echo "Updated to: $NEW_STATUS"
+          fi
+        fi
+
+    - name: Add comment
+      if: github.event_name == 'issues'
+      run: |
+        gh issue comment ${{ github.event.issue.number }} --body "🎯 Project board updated automatically"
