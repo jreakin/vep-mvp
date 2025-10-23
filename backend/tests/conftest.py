@@ -13,9 +13,9 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import event
 from sqlalchemy.pool import StaticPool
+from sqlmodel import Session, SQLModel, create_engine
 
 from app.main import app
 from app.models.user import User
@@ -59,8 +59,6 @@ def event_loop():
 def db_engine():
     """Create test database engine."""
     # Use SQLite for unit tests (fast)
-    from sqlmodel import SQLModel
-    
     engine = create_engine(
         TEST_DATABASE_URL,
         connect_args={"check_same_thread": False},
@@ -80,13 +78,7 @@ def db_engine():
 @pytest.fixture(scope="function")
 def db_session(db_engine) -> Generator[Session, None, None]:
     """Create database session for tests."""
-    TestingSessionLocal = sessionmaker(
-        autocommit=False,
-        autoflush=False,
-        bind=db_engine,
-    )
-    
-    session = TestingSessionLocal()
+    session = Session(db_engine)
     try:
         yield session
     finally:
@@ -360,8 +352,6 @@ def create_test_voter(db_session, **kwargs):
 @pytest.fixture(scope="session")
 def postgres_engine():
     """Create PostgreSQL engine for integration tests."""
-    from sqlmodel import SQLModel
-    
     if "postgresql" not in POSTGRES_TEST_URL:
         pytest.skip("PostgreSQL not configured for integration tests")
     
@@ -380,13 +370,7 @@ def postgres_engine():
 @pytest.fixture(scope="function")
 def postgres_session(postgres_engine) -> Generator[Session, None, None]:
     """Create PostgreSQL session for integration tests."""
-    TestingSessionLocal = sessionmaker(
-        autocommit=False,
-        autoflush=False,
-        bind=postgres_engine,
-    )
-    
-    session = TestingSessionLocal()
+    session = Session(postgres_engine)
     try:
         yield session
         session.commit()

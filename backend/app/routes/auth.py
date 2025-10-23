@@ -25,10 +25,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class Token(BaseModel):
     """JWT token response."""
-    user_id: str
-    email: str
-    token: str
-    role: str
+    access_token: str
+    token_type: str = "bearer"
+    user: dict
 
 
 class LoginRequest(BaseModel):
@@ -102,10 +101,14 @@ async def signup(user_data: UserCreate, db: DatabaseSession):
     access_token = create_access_token(data={"sub": str(db_user.id)})
     
     return Token(
-        user_id=str(db_user.id),
-        email=db_user.email,
-        token=access_token,
-        role=db_user.role,
+        access_token=access_token,
+        token_type="bearer",
+        user={
+            "id": str(db_user.id),
+            "email": db_user.email,
+            "role": db_user.role,
+            "full_name": db_user.full_name,
+        },
     )
 
 
@@ -150,10 +153,14 @@ async def login(login_data: LoginRequest, db: DatabaseSession):
     access_token = create_access_token(data={"sub": str(user.id)})
     
     return Token(
-        user_id=str(user.id),
-        email=user.email,
-        token=access_token,
-        role=user.role,
+        access_token=access_token,
+        token_type="bearer",
+        user={
+            "id": str(user.id),
+            "email": user.email,
+            "role": user.role,
+            "full_name": user.full_name,
+        },
     )
 
 
