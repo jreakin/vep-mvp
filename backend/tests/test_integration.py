@@ -35,13 +35,11 @@ class TestCompleteWorkflows:
         4. Canvasser logs contacts
         5. Canvasser completes assignment
         """
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # 1. Manager creates assignment for canvasser
         assignment_data = {
             "name": "Morning Walk - Oct 22",
             "description": "Residential neighborhood",
-            "user_id": canvasser_user["id"],
+            "user_id": canvasser_user.id,
             "voter_ids": [v["id"] for v in sample_voters[:5]],
             "due_date": (datetime.now() + timedelta(days=1)).date().isoformat(),
         }
@@ -61,7 +59,7 @@ class TestCompleteWorkflows:
         )
         assert view_response.status_code == status.HTTP_200_OK
         assignment = view_response.json()
-        assert len(assignment["voters"]) == 5
+        assert len(assignment.voters) == 5
         
         # 3. Canvasser starts assignment
         start_response = client.patch(
@@ -72,13 +70,13 @@ class TestCompleteWorkflows:
         assert start_response.status_code == status.HTTP_200_OK
         
         # 4. Canvasser logs contacts for each voter
-        for i, voter in enumerate(assignment["voters"]):
+        for i, voter in enumerate(assignment.voters):
             contact_response = client.post(
                 "/contact-logs",
                 headers=auth_headers_canvasser,
                 json={
                     "assignment_id": assignment_id,
-                    "voter_id": voter["id"],
+                    "voter_id": voter.id,
                     "contact_type": ["knocked", "not_home", "knocked", "knocked", "refused"][i],
                     "result": f"Contact {i + 1}",
                     "support_level": (i % 5) + 1 if i != 4 else None,
@@ -121,8 +119,6 @@ class TestCompleteWorkflows:
         3. Monitor progress
         4. View analytics
         """
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # 1. Manager views all assignments
         assignments_response = client.get(
             "/assignments",
@@ -168,8 +164,6 @@ class TestCrossEntityRelationships:
         db_session,
     ):
         """Test that deleting user cascades to their assignments."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         from tests.conftest import create_test_user, create_test_voter
         
         # Create test user
@@ -184,14 +178,14 @@ class TestCrossEntityRelationships:
             headers=auth_headers_admin,
             json={
                 "name": "Test Assignment",
-                "user_id": user["id"],
+                "user_id": user.id,
                 "voter_ids": [v["id"] for v in voters],
             },
         )
         assignment_id = assignment_response.json()["id"]
         
         # Delete user
-        client.delete(f"/users/{user['id']}", headers=auth_headers_admin)
+        client.delete(f"/users/{user.id}", headers=auth_headers_admin)
         
         # Verify assignment is also deleted
         get_assignment = client.get(
@@ -209,8 +203,6 @@ class TestCrossEntityRelationships:
         sample_voters,
     ):
         """Test that voter contact history shows across multiple assignments."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         voter = sample_voters[0]
         
         # Create two assignments with same voter
@@ -219,8 +211,8 @@ class TestCrossEntityRelationships:
             headers=auth_headers_manager,
             json={
                 "name": "Assignment 1",
-                "user_id": canvasser_user["id"],
-                "voter_ids": [voter["id"]],
+                "user_id": canvasser_user.id,
+                "voter_ids": [voter.id],
             },
         ).json()
         
@@ -229,8 +221,8 @@ class TestCrossEntityRelationships:
             headers=auth_headers_manager,
             json={
                 "name": "Assignment 2",
-                "user_id": canvasser_user["id"],
-                "voter_ids": [voter["id"]],
+                "user_id": canvasser_user.id,
+                "voter_ids": [voter.id],
             },
         ).json()
         
@@ -240,7 +232,7 @@ class TestCrossEntityRelationships:
             headers=auth_headers_canvasser,
             json={
                 "assignment_id": assignment1["id"],
-                "voter_id": voter["id"],
+                "voter_id": voter.id,
                 "contact_type": "knocked",
                 "result": "First contact",
             },
@@ -251,7 +243,7 @@ class TestCrossEntityRelationships:
             headers=auth_headers_canvasser,
             json={
                 "assignment_id": assignment2["id"],
-                "voter_id": voter["id"],
+                "voter_id": voter.id,
                 "contact_type": "phone",
                 "result": "Second contact",
             },
@@ -259,7 +251,7 @@ class TestCrossEntityRelationships:
         
         # Get voter contact history
         history_response = client.get(
-            f"/voters/{voter['id']}/contacts",
+            f"/voters/{voter.id}/contacts",
             headers=auth_headers_canvasser,
         )
         
@@ -285,15 +277,13 @@ class TestAnalyticsIntegration:
         sample_voters,
     ):
         """Test campaign progress analytics with real contact data."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # Create assignment
         assignment = client.post(
             "/assignments",
             headers=auth_headers_manager,
             json={
                 "name": "Analytics Test",
-                "user_id": canvasser_user["id"],
+                "user_id": canvasser_user.id,
                 "voter_ids": [v["id"] for v in sample_voters[:10]],
             },
         ).json()
@@ -318,8 +308,8 @@ class TestAnalyticsIntegration:
                 "/contact-logs",
                 headers=auth_headers_canvasser,
                 json={
-                    "assignment_id": assignment["id"],
-                    "voter_id": voter["id"],
+                    "assignment_id": assignment.id,
+                    "voter_id": voter.id,
                     "contact_type": contact_types[i],
                     "result": f"Contact {i}",
                     "support_level": support_levels[i],
@@ -354,11 +344,9 @@ class TestAnalyticsIntegration:
         canvasser_user,
     ):
         """Test user performance analytics."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # Get user stats
         stats_response = client.get(
-            f"/users/{canvasser_user['id']}/stats",
+            f"/users/{canvasser_user.id}/stats",
             headers=auth_headers_manager,
         )
         
@@ -384,17 +372,15 @@ class TestErrorHandling:
         sample_assignment,
     ):
         """Test handling of concurrent updates to same assignment."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # Simulate two concurrent updates
         response1 = client.patch(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
             json={"status": "in_progress"},
         )
         
         response2 = client.patch(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
             json={"status": "completed"},
         )
@@ -411,17 +397,15 @@ class TestErrorHandling:
         sample_voters,
     ):
         """Test that failed operations rollback properly."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # Try to create assignment with invalid data that will fail mid-transaction
         response = client.post(
             "/assignments",
             headers=auth_headers_manager,
             json={
                 "name": "Test Assignment",
-                "user_id": canvasser_user["id"],
+                "user_id": canvasser_user.id,
                 "voter_ids": [
-                    sample_voters[0]["id"],
+                    sample_voters[0].id,
                     str(uuid4()),  # Invalid voter ID should cause rollback
                 ],
             },
@@ -456,8 +440,6 @@ class TestPerformance:
         db_session,
     ):
         """Test performance with large assignment (100+ voters)."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         from tests.conftest import create_test_voter
         
         # Create 100 voters
@@ -472,7 +454,7 @@ class TestPerformance:
             headers=auth_headers_manager,
             json={
                 "name": "Large Assignment",
-                "user_id": canvasser_user["id"],
+                "user_id": canvasser_user.id,
                 "voter_ids": [v["id"] for v in voters],
             },
         )
@@ -503,12 +485,10 @@ class TestPerformance:
         sample_voters,
     ):
         """Test performance of batch contact logging."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # Create 50 contact logs
         contact_logs = [
             {
-                "assignment_id": sample_assignment["id"],
+                "assignment_id": sample_assignment.id,
                 "voter_id": sample_voters[i % len(sample_voters)]["id"],
                 "contact_type": "knocked",
                 "result": f"Contact {i}",
@@ -550,15 +530,13 @@ class TestSecurityIntegration:
         manager_user,
     ):
         """Test that users can only access their own data appropriately."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # Canvasser should only see their assignments
         canvasser_assignments = client.get(
             "/assignments",
             headers=auth_headers_canvasser,
         )
         for assignment in canvasser_assignments.json()["assignments"]:
-            assert assignment["user_id"] == canvasser_user["id"]
+            assert assignment.user_id == canvasser_user.id
         
         # Manager should see all assignments
         manager_assignments = client.get(
@@ -572,8 +550,6 @@ class TestSecurityIntegration:
 
     def test_sql_injection_prevention(self, client, auth_headers_canvasser):
         """Test that SQL injection attempts are prevented."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # Try SQL injection in search parameter
         malicious_search = "'; DROP TABLE voters; --"
         

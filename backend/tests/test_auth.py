@@ -24,12 +24,10 @@ class TestAuthEndpoints:
 
     def test_login_success(self, client, canvasser_user, test_password):
         """Test successful login with valid credentials."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.post(
             "/auth/login",
             json={
-                "email": canvasser_user["email"],
+                "email": canvasser_user.email,
                 "password": test_password,
             },
         )
@@ -40,13 +38,11 @@ class TestAuthEndpoints:
         assert "token_type" in data
         assert data["token_type"] == "bearer"
         assert "user" in data
-        assert data["user"]["email"] == canvasser_user["email"]
+        assert data["user"]["email"] == canvasser_user.email
         assert data["user"]["role"] == "canvasser"
 
     def test_login_invalid_email(self, client, test_password):
         """Test login with non-existent email."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.post(
             "/auth/login",
             json={
@@ -60,12 +56,10 @@ class TestAuthEndpoints:
 
     def test_login_invalid_password(self, client, canvasser_user):
         """Test login with incorrect password."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.post(
             "/auth/login",
             json={
-                "email": canvasser_user["email"],
+                "email": canvasser_user.email,
                 "password": "WrongPassword123!",
             },
         )
@@ -74,8 +68,6 @@ class TestAuthEndpoints:
 
     def test_login_missing_credentials(self, client):
         """Test login with missing credentials."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # Missing email
         response = client.post(
             "/auth/login",
@@ -92,8 +84,6 @@ class TestAuthEndpoints:
 
     def test_logout(self, client, auth_headers_canvasser):
         """Test logout endpoint."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.post(
             "/auth/logout",
             headers=auth_headers_canvasser,
@@ -103,8 +93,6 @@ class TestAuthEndpoints:
 
     def test_token_refresh(self, client, auth_headers_canvasser):
         """Test token refresh endpoint."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.post(
             "/auth/refresh",
             headers=auth_headers_canvasser,
@@ -117,8 +105,6 @@ class TestAuthEndpoints:
 
     def test_get_current_user(self, client, auth_headers_canvasser, canvasser_user):
         """Test getting current user info."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/auth/me",
             headers=auth_headers_canvasser,
@@ -126,8 +112,8 @@ class TestAuthEndpoints:
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["email"] == canvasser_user["email"]
-        assert data["role"] == canvasser_user["role"]
+        assert data["email"] == canvasser_user.email
+        assert data["role"] == canvasser_user.role
 
 
 # =============================================================================
@@ -141,12 +127,10 @@ class TestJWTTokens:
 
     def test_create_access_token(self, canvasser_user):
         """Test creating JWT access token."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # from app.routes.auth import create_access_token
         
         token = create_access_token(
-            data={"sub": canvasser_user["email"], "user_id": str(canvasser_user["id"])}
+            data={"sub": canvasser_user.email, "user_id": str(canvasser_user.id)}
         )
         
         assert token is not None
@@ -155,23 +139,19 @@ class TestJWTTokens:
 
     def test_verify_valid_token(self, canvasser_user):
         """Test verifying valid JWT token."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # from app.routes.auth import create_access_token, verify_token
         
         token = create_access_token(
-            data={"sub": canvasser_user["email"], "user_id": str(canvasser_user["id"])}
+            data={"sub": canvasser_user.email, "user_id": str(canvasser_user.id)}
         )
         payload = verify_token(token)
         
         assert payload is not None
-        assert payload["sub"] == canvasser_user["email"]
-        assert payload["user_id"] == str(canvasser_user["id"])
+        assert payload["sub"] == canvasser_user.email
+        assert payload["user_id"] == str(canvasser_user.id)
 
     def test_verify_invalid_token(self):
         """Test verifying invalid JWT token."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # from app.routes.auth import verify_token
         
         with pytest.raises(Exception):  # Should raise InvalidTokenError or similar
@@ -179,8 +159,6 @@ class TestJWTTokens:
 
     def test_verify_expired_token(self):
         """Test verifying expired JWT token."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # from app.routes.auth import create_access_token, verify_token
         # from datetime import timedelta
         
@@ -205,8 +183,6 @@ class TestAuthorization:
 
     def test_admin_access_to_all_endpoints(self, client, auth_headers_admin):
         """Test that admin can access all endpoints."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # Admins should be able to access everything
         endpoints = [
             "/users",
@@ -222,8 +198,6 @@ class TestAuthorization:
 
     def test_manager_access_restrictions(self, client, auth_headers_manager):
         """Test manager role restrictions."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # Managers can create assignments
         response = client.post(
             "/assignments",
@@ -245,8 +219,6 @@ class TestAuthorization:
 
     def test_canvasser_access_restrictions(self, client, auth_headers_canvasser):
         """Test canvasser role restrictions."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # Canvassers can view their own assignments
         response = client.get("/assignments", headers=auth_headers_canvasser)
         assert response.status_code != status.HTTP_403_FORBIDDEN
@@ -278,8 +250,6 @@ class TestAuthorization:
 
     def test_unauthenticated_access_denied(self, client):
         """Test that unauthenticated requests are rejected."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         protected_endpoints = [
             "/assignments",
             "/voters",
@@ -293,8 +263,6 @@ class TestAuthorization:
 
     def test_invalid_token_rejected(self, client):
         """Test that invalid tokens are rejected."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/auth/me",
             headers={"Authorization": "Bearer invalid-token"},
@@ -314,8 +282,6 @@ class TestSecurityFeatures:
 
     def test_password_hashing(self, test_password):
         """Test that passwords are properly hashed."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # from app.dependencies import hash_password, verify_password
         
         hashed = hash_password(test_password)
@@ -327,8 +293,6 @@ class TestSecurityFeatures:
 
     def test_password_requirements(self):
         """Test password validation requirements."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # from app.dependencies import validate_password
         
         # Valid passwords
@@ -343,8 +307,6 @@ class TestSecurityFeatures:
 
     def test_rate_limiting(self, client):
         """Test rate limiting on login endpoint."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # Attempt multiple failed logins
         for _ in range(10):
             response = client.post(
@@ -365,8 +327,6 @@ class TestSecurityFeatures:
 
     def test_cors_headers(self, client):
         """Test CORS headers are properly set."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.options(
             "/auth/login",
             headers={"Origin": "http://localhost:3000"},
@@ -387,13 +347,11 @@ class TestAuthIntegration:
 
     def test_complete_auth_flow(self, client, canvasser_user, test_password):
         """Test complete authentication flow from login to authenticated request."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # 1. Login
         login_response = client.post(
             "/auth/login",
             json={
-                "email": canvasser_user["email"],
+                "email": canvasser_user.email,
                 "password": test_password,
             },
         )
@@ -404,7 +362,7 @@ class TestAuthIntegration:
         headers = {"Authorization": f"Bearer {token}"}
         me_response = client.get("/auth/me", headers=headers)
         assert me_response.status_code == status.HTTP_200_OK
-        assert me_response.json()["email"] == canvasser_user["email"]
+        assert me_response.json()["email"] == canvasser_user.email
         
         # 3. Refresh token
         refresh_response = client.post("/auth/refresh", headers=headers)
@@ -419,18 +377,16 @@ class TestAuthIntegration:
 
     def test_multiple_concurrent_sessions(self, client, canvasser_user, test_password):
         """Test that multiple sessions can be active simultaneously."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # Login twice to get two different tokens
         response1 = client.post(
             "/auth/login",
-            json={"email": canvasser_user["email"], "password": test_password},
+            json={"email": canvasser_user.email, "password": test_password},
         )
         token1 = response1.json()["access_token"]
         
         response2 = client.post(
             "/auth/login",
-            json={"email": canvasser_user["email"], "password": test_password},
+            json={"email": canvasser_user.email, "password": test_password},
         )
         token2 = response2.json()["access_token"]
         

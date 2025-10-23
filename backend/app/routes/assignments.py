@@ -164,7 +164,7 @@ async def get_assignment(assignment_id: UUID, db: DatabaseSession, current_user:
         ORDER BY av.sequence_order NULLS LAST, v.last_name, v.first_name
     """)
     
-    voters_results = db.exec(voters_query, {"assignment_id": assignment.id}).all()
+    voters_results = db.exec(voters_query.bindparams(assignment_id=str(assignment.id))).all()
     
     voters = []
     for row in voters_results:
@@ -398,7 +398,7 @@ async def get_assignment_voters(
         ORDER BY av.sequence_order NULLS LAST, v.last_name, v.first_name
     """)
     
-    results = db.exec(voters_query, {"assignment_id": assignment.id}).all()
+    results = db.exec(voters_query.bindparams(assignment_id=str(assignment.id))).all()
     
     voters = []
     for row in results:

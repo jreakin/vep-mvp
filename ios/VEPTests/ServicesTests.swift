@@ -40,8 +40,6 @@ final class APIClientTests: XCTestCase {
     
     func testSetAuthToken() throws {
         // TODO: Implement when Agent 4 completes APIClient
-        throw XCTSkip("APIClient implementation pending from Agent 4")
-        
         // Given
         let token = "test-jwt-token"
         
@@ -54,8 +52,6 @@ final class APIClientTests: XCTestCase {
     
     func testGetAssignments_Success() async throws {
         // TODO: Implement when Agent 4 completes APIClient
-        throw XCTSkip("APIClient implementation pending from Agent 4")
-        
         // Given
         let mockData = """
         {
@@ -89,8 +85,6 @@ final class APIClientTests: XCTestCase {
     
     func testGetAssignments_NetworkError() async throws {
         // TODO: Implement when Agent 4 completes APIClient
-        throw XCTSkip("APIClient implementation pending from Agent 4")
-        
         // Given
         mockURLSession.error = NSError(domain: NSURLErrorDomain, code: NSURLErrorNotConnectedToInternet)
         
@@ -105,8 +99,6 @@ final class APIClientTests: XCTestCase {
     
     func testGetAssignments_UnauthorizedError() async throws {
         // TODO: Implement when Agent 4 completes APIClient
-        throw XCTSkip("APIClient implementation pending from Agent 4")
-        
         // Given
         mockURLSession.response = HTTPURLResponse(
             url: URL(string: "https://test.com")!,
@@ -127,8 +119,6 @@ final class APIClientTests: XCTestCase {
     
     func testGetAssignment_Success() async throws {
         // TODO: Implement when Agent 4 completes APIClient
-        throw XCTSkip("APIClient implementation pending from Agent 4")
-        
         // Given
         let assignmentId = UUID()
         let mockData = """
@@ -164,8 +154,6 @@ final class APIClientTests: XCTestCase {
     
     func testCreateContactLog_Success() async throws {
         // TODO: Implement when Agent 4 completes APIClient
-        throw XCTSkip("APIClient implementation pending from Agent 4")
-        
         // Given
         let contactLog = ContactLog(
             id: UUID(),
@@ -225,8 +213,6 @@ final class OfflineStorageServiceTests: XCTestCase {
     
     func testCacheAssignment() throws {
         // TODO: Implement when Agent 4 completes OfflineStorageService
-        throw XCTSkip("OfflineStorageService implementation pending from Agent 4")
-        
         // Given
         let assignment = Assignment(
             id: UUID(),
@@ -251,8 +237,6 @@ final class OfflineStorageServiceTests: XCTestCase {
     
     func testQueueContactLog() throws {
         // TODO: Implement when Agent 4 completes OfflineStorageService
-        throw XCTSkip("OfflineStorageService implementation pending from Agent 4")
-        
         // Given
         let contactLog = ContactLog(
             id: UUID(),
@@ -276,8 +260,6 @@ final class OfflineStorageServiceTests: XCTestCase {
     
     func testClearSyncedLog() throws {
         // TODO: Implement when Agent 4 completes OfflineStorageService
-        throw XCTSkip("OfflineStorageService implementation pending from Agent 4")
-        
         // Given
         let contactLog = ContactLog(
             id: UUID(),
@@ -301,8 +283,6 @@ final class OfflineStorageServiceTests: XCTestCase {
     
     func testClearCache() throws {
         // TODO: Implement when Agent 4 completes OfflineStorageService
-        throw XCTSkip("OfflineStorageService implementation pending from Agent 4")
-        
         // Given
         let assignment = Assignment(
             id: UUID(),
@@ -347,8 +327,6 @@ final class SyncServiceTests: XCTestCase {
     
     func testSyncPendingLogs_Success() async throws {
         // TODO: Implement when Agent 4 completes SyncService
-        throw XCTSkip("SyncService implementation pending from Agent 4")
-        
         // Given
         let pendingLog = ContactLog(
             id: UUID(),
@@ -373,8 +351,6 @@ final class SyncServiceTests: XCTestCase {
     
     func testSyncPendingLogs_NetworkFailure() async throws {
         // TODO: Implement when Agent 4 completes SyncService
-        throw XCTSkip("SyncService implementation pending from Agent 4")
-        
         // Given
         mockAPIClient.shouldFail = true
         mockStorage.pendingLogs = [
@@ -400,8 +376,6 @@ final class SyncServiceTests: XCTestCase {
     
     func testAutoSync() async throws {
         // TODO: Implement when Agent 4 completes SyncService
-        throw XCTSkip("SyncService implementation pending from Agent 4")
-        
         // When
         syncService.startAutoSync(interval: 1.0)
         
@@ -428,8 +402,6 @@ final class LocationServiceTests: XCTestCase {
     
     func testRequestLocationPermission() throws {
         // TODO: Implement when Agent 4 completes LocationService
-        throw XCTSkip("LocationService implementation pending from Agent 4")
-        
         // When
         locationService.requestPermission()
         
@@ -439,8 +411,6 @@ final class LocationServiceTests: XCTestCase {
     
     func testGetCurrentLocation() async throws {
         // TODO: Implement when Agent 4 completes LocationService
-        throw XCTSkip("LocationService implementation pending from Agent 4")
-        
         // When
         let location = try await locationService.getCurrentLocation()
         

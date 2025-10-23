@@ -11,7 +11,6 @@ on:
 jobs:
   backend-quality:
     runs-on: ubuntu-latest
-    if: contains(github.event.head_commit.modified, 'backend/') || github.event_name == 'schedule'
     
     steps:
     - uses: actions/checkout@v4
@@ -68,7 +67,6 @@ jobs:
 
   ios-quality:
     runs-on: macos-latest
-    if: contains(github.event.head_commit.modified, 'ios/') || github.event_name == 'schedule'
     
     steps:
     - uses: actions/checkout@v4
@@ -102,7 +100,6 @@ jobs:
 
   dependency-check:
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule'
     
     steps:
     - uses: actions/checkout@v4
@@ -139,7 +136,6 @@ jobs:
 
   performance-test:
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule'
     
     steps:
     - uses: actions/checkout@v4

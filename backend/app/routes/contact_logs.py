@@ -98,7 +98,7 @@ async def create_contact_log(
         update_location_query = text(
             "UPDATE contact_logs SET location = ST_GeomFromEWKT(:point) WHERE id = :log_id"
         )
-        db.exec(update_location_query, {"point": point, "log_id": db_log.id})
+        db.exec(update_location_query.bindparams(point=point, log_id=str(db_log.id)))
         db.commit()
     
     db.refresh(db_log)
@@ -111,7 +111,7 @@ async def create_contact_log(
         location_query = text(
             "SELECT ST_AsText(location) FROM contact_logs WHERE id = :log_id"
         )
-        location_result = db.exec(location_query, {"log_id": db_log.id}).first()
+        location_result = db.exec(location_query.bindparams(log_id=str(db_log.id))).first()
         if location_result and location_result[0]:
             log_dict["location"] = point_to_coordinate(location_result[0])
         else:
@@ -173,8 +173,8 @@ async def list_contact_logs(
     query_parts.append("ORDER BY cl.contacted_at DESC")
     query_parts.append("LIMIT :limit OFFSET :offset")
     
-    query = text(" ".join(query_parts))
-    results = db.exec(query, params).all()
+    query = text(" ".join(query_parts)).bindparams(**params)
+    results = db.exec(query).all()
     
     logs = []
     for row in results:
@@ -251,7 +251,7 @@ async def update_contact_log(
     location_query = text(
         "SELECT ST_AsText(location) FROM contact_logs WHERE id = :log_id"
     )
-    location_result = db.exec(location_query, {"log_id": log.id}).first()
+    location_result = db.exec(location_query.bindparams(log_id=str(log.id))).first()
     if location_result and location_result[0]:
         log_dict["location"] = point_to_coordinate(location_result[0])
     else:

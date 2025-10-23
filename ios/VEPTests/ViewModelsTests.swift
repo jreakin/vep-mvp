@@ -40,8 +40,6 @@ final class AssignmentListViewModelTests: XCTestCase {
     
     func testLoadAssignments_Success() async throws {
         // TODO: Implement when Agent 3 completes ViewModels
-        throw XCTSkip("ViewModel implementation pending from Agent 3")
-        
         // Given
         let mockAssignments = [
             Assignment(
@@ -78,8 +76,6 @@ final class AssignmentListViewModelTests: XCTestCase {
     
     func testLoadAssignments_Failure() async throws {
         // TODO: Implement when Agent 3 completes ViewModels
-        throw XCTSkip("ViewModel implementation pending from Agent 3")
-        
         // Given
         mockAPIClient.shouldFail = true
         
@@ -94,8 +90,6 @@ final class AssignmentListViewModelTests: XCTestCase {
     
     func testFilterByStatus() throws {
         // TODO: Implement when Agent 3 completes ViewModels
-        throw XCTSkip("ViewModel implementation pending from Agent 3")
-        
         // Given
         viewModel.assignments = [
             Assignment(id: UUID(), name: "Pending", status: .pending, voterCount: 10, completedCount: 0),
@@ -113,8 +107,6 @@ final class AssignmentListViewModelTests: XCTestCase {
     
     func testRefreshAssignments() async throws {
         // TODO: Implement when Agent 3 completes ViewModels
-        throw XCTSkip("ViewModel implementation pending from Agent 3")
-        
         // When
         await viewModel.refreshAssignments()
         
@@ -178,8 +170,6 @@ final class WalkListViewModelTests: XCTestCase {
     
     func testCurrentVoter() throws {
         // TODO: Implement when Agent 3 completes ViewModels
-        throw XCTSkip("ViewModel implementation pending from Agent 3")
-        
         // Then
         XCTAssertNotNil(viewModel.currentVoter)
         XCTAssertEqual(viewModel.currentVoterIndex, 0)
@@ -187,8 +177,6 @@ final class WalkListViewModelTests: XCTestCase {
     
     func testNextVoter() throws {
         // TODO: Implement when Agent 3 completes ViewModels
-        throw XCTSkip("ViewModel implementation pending from Agent 3")
-        
         // Given
         let initialIndex = viewModel.currentVoterIndex
         
@@ -201,8 +189,6 @@ final class WalkListViewModelTests: XCTestCase {
     
     func testPreviousVoter() throws {
         // TODO: Implement when Agent 3 completes ViewModels
-        throw XCTSkip("ViewModel implementation pending from Agent 3")
-        
         // Given
         viewModel.currentVoterIndex = 2
         
@@ -215,8 +201,6 @@ final class WalkListViewModelTests: XCTestCase {
     
     func testProgressCalculation() throws {
         // TODO: Implement when Agent 3 completes ViewModels
-        throw XCTSkip("ViewModel implementation pending from Agent 3")
-        
         // Given
         XCTAssertEqual(viewModel.progress, 0.0)
         
@@ -231,8 +215,6 @@ final class WalkListViewModelTests: XCTestCase {
     
     func testLogContact() async throws {
         // TODO: Implement when Agent 3 & 4 complete implementation
-        throw XCTSkip("ViewModel implementation pending from Agents 3 & 4")
-        
         // Given
         let voter = viewModel.currentVoter!
         let contactLog = ContactLog(
@@ -256,8 +238,6 @@ final class WalkListViewModelTests: XCTestCase {
     
     func testAutoAdvanceAfterContact() async throws {
         // TODO: Implement when Agent 3 & 4 complete implementation
-        throw XCTSkip("ViewModel implementation pending from Agents 3 & 4")
-        
         // Given
         let initialIndex = viewModel.currentVoterIndex
         let contactLog = ContactLog(
@@ -311,8 +291,6 @@ final class VoterDetailViewModelTests: XCTestCase {
     
     func testLoadContactHistory() async throws {
         // TODO: Implement when Agent 3 & 4 complete implementation
-        throw XCTSkip("ViewModel implementation pending from Agents 3 & 4")
-        
         // Given
         let mockContacts = [
             ContactLog(
@@ -351,8 +329,6 @@ final class ContactFormViewModelTests: XCTestCase {
     
     func testContactTypeSelection() throws {
         // TODO: Implement when Agent 3 completes ViewModels
-        throw XCTSkip("ViewModel implementation pending from Agent 3")
-        
         // When
         viewModel.selectedContactType = .phone
         
@@ -362,8 +338,6 @@ final class ContactFormViewModelTests: XCTestCase {
     
     func testFormValidation() throws {
         // TODO: Implement when Agent 3 completes ViewModels
-        throw XCTSkip("ViewModel implementation pending from Agent 3")
-        
         // Given - Empty form
         XCTAssertFalse(viewModel.isValid)
         

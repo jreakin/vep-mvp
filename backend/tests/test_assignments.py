@@ -20,8 +20,6 @@ class TestAssignmentEndpoints:
 
     def test_get_assignments_list(self, client, auth_headers_canvasser):
         """Test getting list of assignments."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get("/assignments", headers=auth_headers_canvasser)
         
         assert response.status_code == status.HTTP_200_OK
@@ -33,20 +31,16 @@ class TestAssignmentEndpoints:
         self, client, auth_headers_canvasser, canvasser_user
     ):
         """Test that canvassers only see their own assignments."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get("/assignments", headers=auth_headers_canvasser)
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         # All returned assignments should belong to the canvasser
         for assignment in data["assignments"]:
-            assert assignment["user_id"] == canvasser_user["id"]
+            assert assignment.user_id == canvasser_user.id
 
     def test_get_assignments_manager_sees_all(self, client, auth_headers_manager):
         """Test that managers see all assignments."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get("/assignments", headers=auth_headers_manager)
         
         assert response.status_code == status.HTTP_200_OK
@@ -56,23 +50,19 @@ class TestAssignmentEndpoints:
         self, client, auth_headers_canvasser, sample_assignment
     ):
         """Test getting single assignment by ID."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
         )
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["id"] == sample_assignment["id"]
-        assert data["name"] == sample_assignment["name"]
+        assert data["id"] == sample_assignment.id
+        assert data["name"] == sample_assignment.name
         assert "voters" in data
 
     def test_get_assignment_not_found(self, client, auth_headers_canvasser):
         """Test getting non-existent assignment."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         fake_id = str(uuid4())
         response = client.get(
             f"/assignments/{fake_id}",
@@ -85,12 +75,10 @@ class TestAssignmentEndpoints:
         self, client, auth_headers_manager, canvasser_user, sample_voters
     ):
         """Test creating new assignment as manager."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         new_assignment = {
             "name": "New Assignment",
             "description": "Test assignment",
-            "user_id": canvasser_user["id"],
+            "user_id": canvasser_user.id,
             "voter_ids": [v["id"] for v in sample_voters[:5]],
             "due_date": "2025-10-25",
         }
@@ -103,7 +91,7 @@ class TestAssignmentEndpoints:
         
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["name"] == new_assignment["name"]
+        assert data["name"] == new_assignment.name
         assert data["status"] == "pending"
         assert "id" in data
 
@@ -111,8 +99,6 @@ class TestAssignmentEndpoints:
         self, client, auth_headers_canvasser
     ):
         """Test that canvasser cannot create assignments."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         new_assignment = {
             "name": "Unauthorized Assignment",
             "user_id": str(uuid4()),
@@ -131,8 +117,6 @@ class TestAssignmentEndpoints:
         self, client, auth_headers_manager, sample_voters
     ):
         """Test creating assignment with non-existent user."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         new_assignment = {
             "name": "Invalid User Assignment",
             "user_id": str(uuid4()),  # Non-existent user
@@ -151,11 +135,9 @@ class TestAssignmentEndpoints:
         self, client, auth_headers_manager, canvasser_user
     ):
         """Test creating assignment with non-existent voters."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         new_assignment = {
             "name": "Invalid Voters Assignment",
-            "user_id": canvasser_user["id"],
+            "user_id": canvasser_user.id,
             "voter_ids": [str(uuid4()), str(uuid4())],  # Non-existent voters
         }
         
@@ -171,12 +153,10 @@ class TestAssignmentEndpoints:
         self, client, auth_headers_canvasser, sample_assignment
     ):
         """Test updating assignment status."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         updates = {"status": "in_progress"}
         
         response = client.patch(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
             json=updates,
         )
@@ -189,12 +169,10 @@ class TestAssignmentEndpoints:
         self, client, auth_headers_canvasser, sample_assignment
     ):
         """Test marking assignment as completed."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         updates = {"status": "completed"}
         
         response = client.patch(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
             json=updates,
         )
@@ -207,12 +185,10 @@ class TestAssignmentEndpoints:
         self, client, auth_headers_canvasser, sample_assignment
     ):
         """Test updating assignment with invalid status."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         updates = {"status": "invalid_status"}
         
         response = client.patch(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
             json=updates,
         )
@@ -223,18 +199,16 @@ class TestAssignmentEndpoints:
         self, client, auth_headers_canvasser, db_session, manager_user
     ):
         """Test that canvasser cannot update other users' assignments."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # Create assignment for manager
         other_assignment = {
             "id": str(uuid4()),
-            "user_id": manager_user["id"],
+            "user_id": manager_user.id,
             "name": "Manager's Assignment",
             "status": "pending",
         }
         
         response = client.patch(
-            f"/assignments/{other_assignment['id']}",
+            f"/assignments/{other_assignment.id}",
             headers=auth_headers_canvasser,
             json={"status": "completed"},
         )
@@ -245,10 +219,8 @@ class TestAssignmentEndpoints:
         self, client, auth_headers_manager, sample_assignment
     ):
         """Test deleting assignment as manager."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.delete(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_manager,
         )
         
@@ -258,10 +230,8 @@ class TestAssignmentEndpoints:
         self, client, auth_headers_canvasser, sample_assignment
     ):
         """Test that canvasser cannot delete assignments."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.delete(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
         )
         
@@ -278,8 +248,6 @@ class TestAssignmentFiltering:
 
     def test_filter_assignments_by_status(self, client, auth_headers_manager):
         """Test filtering assignments by status."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/assignments?status=pending",
             headers=auth_headers_manager,
@@ -288,12 +256,10 @@ class TestAssignmentFiltering:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         for assignment in data["assignments"]:
-            assert assignment["status"] == "pending"
+            assert assignment.status == "pending"
 
     def test_filter_assignments_by_date_range(self, client, auth_headers_manager):
         """Test filtering assignments by date range."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/assignments?start_date=2025-10-20&end_date=2025-10-30",
             headers=auth_headers_manager,
@@ -303,22 +269,18 @@ class TestAssignmentFiltering:
 
     def test_filter_assignments_by_user(self, client, auth_headers_manager, canvasser_user):
         """Test filtering assignments by user."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
-            f"/assignments?user_id={canvasser_user['id']}",
+            f"/assignments?user_id={canvasser_user.id}",
             headers=auth_headers_manager,
         )
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         for assignment in data["assignments"]:
-            assert assignment["user_id"] == canvasser_user["id"]
+            assert assignment.user_id == canvasser_user.id
 
     def test_search_assignments_by_name(self, client, auth_headers_manager):
         """Test searching assignments by name."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/assignments?search=Test",
             headers=auth_headers_manager,
@@ -328,8 +290,6 @@ class TestAssignmentFiltering:
 
     def test_pagination_assignments(self, client, auth_headers_manager):
         """Test assignment list pagination."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/assignments?limit=10&offset=0",
             headers=auth_headers_manager,
@@ -355,10 +315,8 @@ class TestAssignmentVoters:
         self, client, auth_headers_canvasser, sample_assignment
     ):
         """Test getting assignment includes voter list."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
         )
         
@@ -372,10 +330,8 @@ class TestAssignmentVoters:
         self, client, auth_headers_canvasser, sample_assignment
     ):
         """Test that voters are returned in sequence order."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
         )
         
@@ -391,12 +347,10 @@ class TestAssignmentVoters:
         self, client, auth_headers_manager, sample_assignment, sample_voters
     ):
         """Test adding voters to existing assignment."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         new_voter_ids = [sample_voters[5]["id"], sample_voters[6]["id"]]
         
         response = client.post(
-            f"/assignments/{sample_assignment['id']}/voters",
+            f"/assignments/{sample_assignment.id}/voters",
             headers=auth_headers_manager,
             json={"voter_ids": new_voter_ids},
         )
@@ -407,12 +361,10 @@ class TestAssignmentVoters:
         self, client, auth_headers_manager, sample_assignment, sample_voters
     ):
         """Test removing voter from assignment."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
-        voter_to_remove = sample_voters[0]["id"]
+        voter_to_remove = sample_voters[0].id
         
         response = client.delete(
-            f"/assignments/{sample_assignment['id']}/voters/{voter_to_remove}",
+            f"/assignments/{sample_assignment.id}/voters/{voter_to_remove}",
             headers=auth_headers_manager,
         )
         
@@ -422,16 +374,14 @@ class TestAssignmentVoters:
         self, client, auth_headers_manager, sample_assignment, sample_voters
     ):
         """Test reordering voters in assignment."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         new_order = [
             {"voter_id": sample_voters[2]["id"], "sequence_order": 1},
-            {"voter_id": sample_voters[0]["id"], "sequence_order": 2},
+            {"voter_id": sample_voters[0].id, "sequence_order": 2},
             {"voter_id": sample_voters[1]["id"], "sequence_order": 3},
         ]
         
         response = client.patch(
-            f"/assignments/{sample_assignment['id']}/voters/reorder",
+            f"/assignments/{sample_assignment.id}/voters/reorder",
             headers=auth_headers_manager,
             json={"voters": new_order},
         )
@@ -451,10 +401,8 @@ class TestAssignmentProgress:
         self, client, auth_headers_canvasser, sample_assignment
     ):
         """Test getting assignment progress statistics."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
-            f"/assignments/{sample_assignment['id']}/progress",
+            f"/assignments/{sample_assignment.id}/progress",
             headers=auth_headers_canvasser,
         )
         
@@ -469,16 +417,14 @@ class TestAssignmentProgress:
         self, client, auth_headers_canvasser, sample_assignment, sample_voters
     ):
         """Test that assignment auto-completes when all voters contacted."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # Log contact for all voters in assignment
         for voter in sample_voters[:5]:  # Assuming 5 voters in sample_assignment
             client.post(
                 "/contact-logs",
                 headers=auth_headers_canvasser,
                 json={
-                    "assignment_id": sample_assignment["id"],
-                    "voter_id": voter["id"],
+                    "assignment_id": sample_assignment.id,
+                    "voter_id": voter.id,
                     "contact_type": "knocked",
                     "result": "Contacted",
                 },
@@ -486,7 +432,7 @@ class TestAssignmentProgress:
         
         # Check assignment status
         response = client.get(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
         )
         
@@ -508,15 +454,13 @@ class TestAssignmentIntegration:
         canvasser_user, sample_voters
     ):
         """Test complete assignment lifecycle."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # 1. Manager creates assignment
         create_response = client.post(
             "/assignments",
             headers=auth_headers_manager,
             json={
                 "name": "Lifecycle Test",
-                "user_id": canvasser_user["id"],
+                "user_id": canvasser_user.id,
                 "voter_ids": [v["id"] for v in sample_voters[:3]],
                 "due_date": "2025-10-25",
             },

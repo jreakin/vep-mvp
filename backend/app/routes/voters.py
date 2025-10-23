@@ -70,7 +70,7 @@ async def list_voters(
         location_query = text(
             "SELECT ST_AsText(location) FROM voters WHERE id = :voter_id"
         )
-        location_result = db.exec(location_query, {"voter_id": voter.id}).first()
+        location_result = db.exec(location_query.bindparams(voter_id=str(voter.id))).first()
         if location_result and location_result[0]:
             voter_dict["location"] = point_to_coordinate(location_result[0])
         else:
@@ -111,7 +111,7 @@ async def get_voter(voter_id: UUID, db: DatabaseSession, current_user: CurrentUs
     location_query = text(
         "SELECT ST_AsText(location) FROM voters WHERE id = :voter_id"
     )
-    location_result = db.exec(location_query, {"voter_id": voter.id}).first()
+    location_result = db.exec(location_query.bindparams(voter_id=str(voter.id))).first()
     if location_result and location_result[0]:
         voter_dict["location"] = point_to_coordinate(location_result[0])
     else:
@@ -126,7 +126,7 @@ async def get_voter(voter_id: UUID, db: DatabaseSession, current_user: CurrentUs
         ORDER BY cl.contacted_at DESC
         LIMIT 10
     """)
-    contact_results = db.exec(contact_query, {"voter_id": voter.id}).all()
+    contact_results = db.exec(contact_query.bindparams(voter_id=str(voter.id))).all()
     
     contact_history = [
         {
@@ -190,7 +190,7 @@ async def update_voter(
         update_location_query = text(
             "UPDATE voters SET location = ST_GeomFromEWKT(:point) WHERE id = :voter_id"
         )
-        db.exec(update_location_query, {"point": point, "voter_id": voter.id})
+        db.exec(update_location_query.bindparams(point=point, voter_id=str(voter.id)))
     
     db.commit()
     db.refresh(voter)
@@ -200,7 +200,7 @@ async def update_voter(
     location_query = text(
         "SELECT ST_AsText(location) FROM voters WHERE id = :voter_id"
     )
-    location_result = db.exec(location_query, {"voter_id": voter.id}).first()
+    location_result = db.exec(location_query.bindparams(voter_id=str(voter.id))).first()
     if location_result and location_result[0]:
         voter_dict["location"] = point_to_coordinate(location_result[0])
     else:
