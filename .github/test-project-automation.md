@@ -1,8 +1,17 @@
-# Test Project Automation Workflow
+# Project Automation Workflow
+
+## ✨ Recent Updates (October 2025)
+
+**✅ Cleaned up test workflows** - Removed 20+ test/debug workflow files  
+**✅ Removed hardcoded project IDs** - Now fully dynamic  
+**✅ Improved project detection** - Supports both user and organization projects  
+**✅ Better error handling** - More detailed logging and graceful failures
+
+## 🎯 Overview
+
+The project automation workflow uses GitHub Projects V2 API to automatically move issues and PRs between your project board status fields. The workflow is fully dynamic with **no hardcoded project IDs** - it automatically detects your project by searching for "VEP" or "MVP" in the project name.
 
 ## 🧪 How to Test the Project Automation
-
-The project automation workflow uses GitHub Projects V2 API to automatically move issues and PRs between your project board status fields. Here's how to test it:
 
 ### **Prerequisites:**
 - Project board must use GitHub Projects V2 (the new Projects)
