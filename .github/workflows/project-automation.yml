@@ -2,25 +2,26 @@ name: Project Automation
 
 on:
   issues:
-    types: [opened, closed, assigned, unassigned, labeled, unlabeled]
+    types: [opened, closed, assigned, labeled]
   pull_request:
-    types: [opened, closed, merged, reopened, labeled, unlabeled]
+    types: [opened, closed, reopened]
+  workflow_dispatch:
 
 permissions:
   issues: write
   pull-requests: write
-  contents: write
   projects: write
+  contents: read
 
 jobs:
-  update-project-status:
+  automate-project:
     runs-on: ubuntu-latest
-    if: github.event_name == 'issues' || github.event_name == 'pull_request'
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-    - name: Update project card status
+    - name: Update project status
       uses: actions/github-script@v7
       with:
         script: |
@@ -34,15 +35,240 @@ jobs:
           
           console.log(`Processing ${context.eventName} event for ${item.number}`);
           
-          // For now, just add a comment to test the workflow
+          // Get project information - dynamically detect owner type
+          const owner = context.repo.owner;
+          
+          // Try user projects first
+          let projectQuery = `
+            query {
+              user(login: "${owner}") {
+                projectsV2(first: 20) {
+                  nodes {
+                    id
+                    title
+                    number
+                  }
+                }
+              }
+            }
+          `;
+          
+          let projects = [];
           try {
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: item.number,
-              body: `🔄 **Project Automation Test**: Workflow is running for ${context.eventName} #${item.number}`
-            });
-            console.log(`Added test comment to ${context.eventName} #${item.number}`);
+            const projectResult = await github.graphql(projectQuery);
+            projects = projectResult.user.projectsV2.nodes;
           } catch (error) {
-            console.log(`Failed to add comment: ${error.message}`);
+            console.log('Not a user, trying organization...');
+            // Try organization projects
+            projectQuery = `
+              query {
+                organization(login: "${owner}") {
+                  projectsV2(first: 20) {
+                    nodes {
+                      id
+                      title
+                      number
+                    }
+                  }
+                }
+              }
+            `;
+            try {
+              const projectResult = await github.graphql(projectQuery);
+              projects = projectResult.organization.projectsV2.nodes;
+            } catch (orgError) {
+              console.log('Could not fetch projects:', orgError.message);
+              return;
+            }
+          }
+          
+          console.log('Available projects:', projects.map(p => p.title));
+          
+          // Find VEP MVP project
+          const vepProject = projects.find(p => 
+            p.title.toLowerCase().includes('vep') || 
+            p.title.toLowerCase().includes('mvp')
+          );
+          
+          if (!vepProject) {
+            console.log('VEP MVP project not found');
+            return;
+          }
+          
+          console.log(`Found project: ${vepProject.title} (${vepProject.id})`);
+          
+          // Get project fields
+          const projectFieldsQuery = `
+            query {
+              node(id: "${vepProject.id}") {
+                ... on ProjectV2 {
+                  fields(first: 20) {
+                    nodes {
+                      ... on ProjectV2Field {
+                        id
+                        name
+                      }
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        name
+                        options {
+                          id
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          `;
+          
+          const fieldsResult = await github.graphql(projectFieldsQuery);
+          const fields = fieldsResult.node.fields.nodes;
+          
+          const statusField = fields.find(f => f.name === 'Status');
+          
+          if (!statusField || !statusField.options) {
+            console.log('Status field not found or has no options');
+            console.log('Available fields:', fields.map(f => f.name));
+            return;
+          }
+          
+          console.log('Status field options:', statusField.options.map(o => o.name));
+          
+          // Find the project item
+          const itemType = issue ? 'Issue' : 'PullRequest';
+          const itemQuery = `
+            query {
+              repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
+                ${issue ? 'issue' : 'pullRequest'}(number: ${item.number}) {
+                  id
+                  projectItems(first: 10) {
+                    nodes {
+                      id
+                      project {
+                        id
+                        title
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          `;
+          
+          const itemResult = await github.graphql(itemQuery);
+          const node = issue ? itemResult.repository.issue : itemResult.repository.pullRequest;
+          const projectItems = node.projectItems.nodes;
+          
+          console.log('Project items:', projectItems.map(i => i.project.title));
+          
+          const vepProjectItem = projectItems.find(item => item.project.id === vepProject.id);
+          
+          if (!vepProjectItem) {
+            console.log(`Project item not found for ${itemType} #${item.number}`);
+            console.log('Item must be added to the project board first');
+            return;
+          }
+          
+          // Determine target status based on event
+          let targetStatusName = null;
+          
+          if (context.eventName === 'issues') {
+            const { action } = context.payload;
+            
+            if (action === 'opened') {
+              targetStatusName = 'Ready';
+            } else if (action === 'assigned') {
+              targetStatusName = 'In Progress';
+            } else if (action === 'closed') {
+              targetStatusName = 'Done';
+            } else if (action === 'labeled') {
+              const labelName = context.payload.label.name;
+              if (labelName === 'in-progress') {
+                targetStatusName = 'In Progress';
+              } else if (labelName === 'completed') {
+                targetStatusName = 'Done';
+              }
+            }
+          } else if (context.eventName === 'pull_request') {
+            const { action } = context.payload;
+            
+            if (action === 'opened' || action === 'reopened') {
+              targetStatusName = 'Code Review';
+            } else if (action === 'closed') {
+              if (context.payload.pull_request.merged) {
+                targetStatusName = 'Testing';
+              } else {
+                targetStatusName = 'Ready';
+              }
+            }
+          }
+          
+          if (!targetStatusName) {
+            console.log('No status change needed for this event');
+            return;
+          }
+          
+          console.log(`Target status: ${targetStatusName}`);
+          
+          // Find the status option (with or without emoji prefix)
+          const targetOption = statusField.options.find(o =>
+            o.name === targetStatusName ||
+            o.name === `🟠 ${targetStatusName}` ||
+            o.name === `🟡 ${targetStatusName}` ||
+            o.name === `👀 ${targetStatusName}` ||
+            o.name === `✅ ${targetStatusName}` ||
+            o.name === `🎉 ${targetStatusName}` ||
+            o.name === `🚀 ${targetStatusName}` ||
+            o.name === `🧪 ${targetStatusName}` ||
+            o.name === `↩️ ${targetStatusName}`
+          );
+          
+          if (!targetOption) {
+            console.log(`Status option '${targetStatusName}' not found`);
+            console.log('Available options:', statusField.options.map(o => o.name));
+            return;
+          }
+          
+          console.log(`Updating to status option: ${targetOption.name}`);
+          
+          // Update the project item status
+          const updateMutation = `
+            mutation {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: "${vepProject.id}"
+                itemId: "${vepProjectItem.id}"
+                fieldId: "${statusField.id}"
+                value: {
+                  singleSelectOptionId: "${targetOption.id}"
+                }
+              }) {
+                projectV2Item {
+                  id
+                }
+              }
+            }
+          `;
+          
+          try {
+            await github.graphql(updateMutation);
+            console.log(`Successfully updated project item status to: ${targetOption.name}`);
+            
+            // Add confirmation comment
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: item.number,
+                body: `🎯 **Project Board Updated**: Moved to "${targetOption.name}" automatically.`
+              });
+            } catch (error) {
+              console.log(`Could not add confirmation comment: ${error.message}`);
+            }
+          } catch (updateError) {
+            console.log(`Error updating project item: ${updateError.message}`);
+            if (updateError.errors) {
+              console.log('GraphQL errors:', JSON.stringify(updateError.errors, null, 2));
+            }
           }
