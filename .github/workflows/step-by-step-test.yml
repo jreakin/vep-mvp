@@ -1,0 +1,53 @@
+name: Step by Step Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Step 1 - Checkout
+      uses: actions/checkout@v4
+
+    - name: Step 2 - Check system
+      run: |
+        echo "System info:"
+        uname -a
+        echo "Architecture: $(dpkg --print-architecture)"
+        echo "Available space:"
+        df -h
+
+    - name: Step 3 - Install curl
+      run: |
+        echo "Installing curl..."
+        sudo apt update
+        sudo apt install curl -y
+        curl --version
+
+    - name: Step 4 - Download GitHub CLI
+      run: |
+        echo "Downloading GitHub CLI..."
+        curl -L https://github.com/cli/cli/releases/latest/download/gh_linux_amd64.tar.gz -o gh.tar.gz
+        ls -la gh.tar.gz
+        echo "Download completed"
+
+    - name: Step 5 - Extract GitHub CLI
+      run: |
+        echo "Extracting GitHub CLI..."
+        tar -xzf gh.tar.gz
+        ls -la
+        echo "Extraction completed"
+
+    - name: Step 6 - Install GitHub CLI
+      run: |
+        echo "Installing GitHub CLI..."
+        sudo mv gh_*/bin/gh /usr/local/bin/
+        rm -rf gh_* gh.tar.gz
+        echo "Installation completed"
+
+    - name: Step 7 - Test GitHub CLI
+      run: |
+        echo "Testing GitHub CLI..."
+        gh --version
+        echo "GitHub CLI is working!"
