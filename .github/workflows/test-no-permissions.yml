@@ -1,0 +1,17 @@
+name: Test No Permissions
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Test basic commands
+      run: |
+        echo "Testing basic commands..."
+        echo "Repository: ${{ github.repository }}"
+        echo "Basic test successful!"
