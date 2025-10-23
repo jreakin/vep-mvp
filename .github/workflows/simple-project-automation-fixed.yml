@@ -1,0 +1,42 @@
+name: Simple Project Automation (Fixed)
+
+on:
+  issues:
+    types: [opened, closed, assigned, labeled]
+  pull_request:
+    types: [opened, closed, merged]
+  workflow_dispatch:
+
+jobs:
+  automate-project:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install GitHub CLI
+      run: |
+        curl -L https://github.com/cli/cli/releases/latest/download/gh_linux_amd64.tar.gz -o gh.tar.gz
+        tar -xzf gh.tar.gz
+        sudo mv gh_*/bin/gh /usr/local/bin/
+        rm -rf gh_* gh.tar.gz
+
+    - name: Authenticate
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+    - name: Add item to project
+      run: |
+        if [ "${{ github.event_name }}" = "issues" ]; then
+          URL="https://github.com/${{ github.repository }}/issues/${{ github.event.issue.number }}"
+        else
+          URL="https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+        fi
+        
+        echo "Adding item to project: $URL"
+        gh project item-add 4 --owner jreakin --url "$URL" || echo "Item may already be in project"
+
+    - name: Add confirmation comment
+      if: github.event_name == 'issues'
+      run: |
+        gh issue comment ${{ github.event.issue.number }} --body "🎯 Project board updated automatically"
