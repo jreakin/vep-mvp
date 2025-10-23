@@ -1,0 +1,40 @@
+name: GitHub CLI Alternative Installation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: read
+  projects: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install GitHub CLI using snap
+      run: |
+        echo "Installing GitHub CLI using snap..."
+        sudo snap install gh
+        echo "Installation completed"
+
+    - name: Test GitHub CLI
+      run: |
+        echo "Testing GitHub CLI..."
+        gh --version
+        echo "GitHub CLI is working!"
+
+    - name: Test authentication
+      run: |
+        echo "Testing authentication..."
+        echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+        gh auth status
+        echo "Authentication successful!"
+
+    - name: Test project access
+      run: |
+        echo "Testing project access..."
+        gh project view 4 --owner jreakin
+        echo "Project access successful!"
