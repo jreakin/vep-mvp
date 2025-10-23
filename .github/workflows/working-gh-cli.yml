@@ -1,0 +1,39 @@
+name: Working GitHub CLI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install GitHub CLI
+      run: |
+        echo "Installing GitHub CLI..."
+        curl -L https://github.com/cli/cli/releases/latest/download/gh_linux_amd64.tar.gz -o gh.tar.gz
+        tar -xzf gh.tar.gz
+        sudo mv gh_*/bin/gh /usr/local/bin/
+        rm -rf gh_* gh.tar.gz
+        echo "Installation completed"
+
+    - name: Test GitHub CLI
+      run: |
+        echo "Testing GitHub CLI..."
+        gh --version
+        echo "GitHub CLI is working!"
+
+    - name: Authenticate
+      run: |
+        echo "Authenticating..."
+        echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+        gh auth status
+        echo "Authentication successful!"
+
+    - name: Test project access
+      run: |
+        echo "Testing project access..."
+        gh project view 4 --owner jreakin
+        echo "Project access successful!"
