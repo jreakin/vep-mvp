@@ -1,0 +1,50 @@
+name: Debug GitHub CLI Installation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: read
+  projects: read
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Check system info
+      run: |
+        echo "OS: $(uname -a)"
+        echo "Architecture: $(dpkg --print-architecture)"
+        echo "Available packages:"
+        apt list --installed | grep -i curl || echo "curl not found"
+
+    - name: Install curl if needed
+      run: |
+        sudo apt update
+        sudo apt install curl -y
+
+    - name: Install GitHub CLI
+      run: |
+        echo "Installing GitHub CLI..."
+        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+        sudo apt update
+        sudo apt install gh -y
+        echo "Installation completed"
+
+    - name: Test GitHub CLI
+      run: |
+        echo "Testing GitHub CLI..."
+        gh --version
+        echo "GitHub CLI is working!"
+
+    - name: Test authentication
+      run: |
+        echo "Testing authentication..."
+        echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+        gh auth status
+        echo "Authentication successful!"
