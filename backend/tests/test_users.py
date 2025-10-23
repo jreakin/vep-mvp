@@ -44,7 +44,7 @@ class TestUserEndpoints:
     def test_get_user_by_id(self, client, auth_headers_admin, canvasser_user):
         """Test getting single user by ID."""
         response = client.get(
-            f"/users/{canvasser_user['id']}",
+            f"/users/{canvasser_user.id}",
             headers=auth_headers_admin,
         )
         
@@ -141,7 +141,7 @@ class TestUserEndpoints:
         }
         
         response = client.patch(
-            f"/users/{canvasser_user['id']}",
+            f"/users/{canvasser_user.id}",
             headers=auth_headers_admin,
             json=updates,
         )
@@ -156,7 +156,7 @@ class TestUserEndpoints:
         updates = {"role": "manager"}
         
         response = client.patch(
-            f"/users/{canvasser_user['id']}",
+            f"/users/{canvasser_user.id}",
             headers=auth_headers_manager,
             json=updates,
         )
@@ -172,7 +172,7 @@ class TestUserEndpoints:
         }
         
         response = client.patch(
-            f"/users/{canvasser_user['id']}",
+            f"/users/{canvasser_user.id}",
             headers=auth_headers_canvasser,
             json=updates,
         )
@@ -184,7 +184,7 @@ class TestUserEndpoints:
         updates = {"full_name": "Hacked Name"}
         
         response = client.patch(
-            f"/users/{manager_user['id']}",
+            f"/users/{manager_user.id}",
             headers=auth_headers_canvasser,
             json=updates,
         )
@@ -199,7 +199,7 @@ class TestUserEndpoints:
         user_to_delete = create_test_user(db_session, role="canvasser")
         
         response = client.delete(
-            f"/users/{user_to_delete['id']}",
+            f"/users/{user_to_delete.id}",
             headers=auth_headers_admin,
         )
         
@@ -207,7 +207,7 @@ class TestUserEndpoints:
         
         # Verify user is deleted
         get_response = client.get(
-            f"/users/{user_to_delete['id']}",
+            f"/users/{user_to_delete.id}",
             headers=auth_headers_admin,
         )
         assert get_response.status_code == status.HTTP_404_NOT_FOUND
@@ -215,7 +215,7 @@ class TestUserEndpoints:
     def test_delete_user_forbidden(self, client, auth_headers_canvasser, manager_user):
         """Test that non-admin cannot delete users."""
         response = client.delete(
-            f"/users/{manager_user['id']}",
+            f"/users/{manager_user.id}",
             headers=auth_headers_canvasser,
         )
         
@@ -441,7 +441,7 @@ class TestUserIntegration:
         
         # Delete user
         response = client.delete(
-            f"/users/{user['id']}",
+            f"/users/{user.id}",
             headers=auth_headers_admin,
         )
         assert response.status_code == status.HTTP_204_NO_CONTENT

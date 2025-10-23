@@ -51,7 +51,7 @@ class TestAssignmentEndpoints:
     ):
         """Test getting single assignment by ID."""
         response = client.get(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
         )
         
@@ -156,7 +156,7 @@ class TestAssignmentEndpoints:
         updates = {"status": "in_progress"}
         
         response = client.patch(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
             json=updates,
         )
@@ -172,7 +172,7 @@ class TestAssignmentEndpoints:
         updates = {"status": "completed"}
         
         response = client.patch(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
             json=updates,
         )
@@ -188,7 +188,7 @@ class TestAssignmentEndpoints:
         updates = {"status": "invalid_status"}
         
         response = client.patch(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
             json=updates,
         )
@@ -208,7 +208,7 @@ class TestAssignmentEndpoints:
         }
         
         response = client.patch(
-            f"/assignments/{other_assignment['id']}",
+            f"/assignments/{other_assignment.id}",
             headers=auth_headers_canvasser,
             json={"status": "completed"},
         )
@@ -220,7 +220,7 @@ class TestAssignmentEndpoints:
     ):
         """Test deleting assignment as manager."""
         response = client.delete(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_manager,
         )
         
@@ -231,7 +231,7 @@ class TestAssignmentEndpoints:
     ):
         """Test that canvasser cannot delete assignments."""
         response = client.delete(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
         )
         
@@ -270,7 +270,7 @@ class TestAssignmentFiltering:
     def test_filter_assignments_by_user(self, client, auth_headers_manager, canvasser_user):
         """Test filtering assignments by user."""
         response = client.get(
-            f"/assignments?user_id={canvasser_user['id']}",
+            f"/assignments?user_id={canvasser_user.id}",
             headers=auth_headers_manager,
         )
         
@@ -316,7 +316,7 @@ class TestAssignmentVoters:
     ):
         """Test getting assignment includes voter list."""
         response = client.get(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
         )
         
@@ -331,7 +331,7 @@ class TestAssignmentVoters:
     ):
         """Test that voters are returned in sequence order."""
         response = client.get(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
         )
         
@@ -350,7 +350,7 @@ class TestAssignmentVoters:
         new_voter_ids = [sample_voters[5]["id"], sample_voters[6]["id"]]
         
         response = client.post(
-            f"/assignments/{sample_assignment['id']}/voters",
+            f"/assignments/{sample_assignment.id}/voters",
             headers=auth_headers_manager,
             json={"voter_ids": new_voter_ids},
         )
@@ -364,7 +364,7 @@ class TestAssignmentVoters:
         voter_to_remove = sample_voters[0].id
         
         response = client.delete(
-            f"/assignments/{sample_assignment['id']}/voters/{voter_to_remove}",
+            f"/assignments/{sample_assignment.id}/voters/{voter_to_remove}",
             headers=auth_headers_manager,
         )
         
@@ -381,7 +381,7 @@ class TestAssignmentVoters:
         ]
         
         response = client.patch(
-            f"/assignments/{sample_assignment['id']}/voters/reorder",
+            f"/assignments/{sample_assignment.id}/voters/reorder",
             headers=auth_headers_manager,
             json={"voters": new_order},
         )
@@ -402,7 +402,7 @@ class TestAssignmentProgress:
     ):
         """Test getting assignment progress statistics."""
         response = client.get(
-            f"/assignments/{sample_assignment['id']}/progress",
+            f"/assignments/{sample_assignment.id}/progress",
             headers=auth_headers_canvasser,
         )
         
@@ -432,7 +432,7 @@ class TestAssignmentProgress:
         
         # Check assignment status
         response = client.get(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
         )
         

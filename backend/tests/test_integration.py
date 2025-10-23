@@ -185,7 +185,7 @@ class TestCrossEntityRelationships:
         assignment_id = assignment_response.json()["id"]
         
         # Delete user
-        client.delete(f"/users/{user['id']}", headers=auth_headers_admin)
+        client.delete(f"/users/{user.id}", headers=auth_headers_admin)
         
         # Verify assignment is also deleted
         get_assignment = client.get(
@@ -251,7 +251,7 @@ class TestCrossEntityRelationships:
         
         # Get voter contact history
         history_response = client.get(
-            f"/voters/{voter['id']}/contacts",
+            f"/voters/{voter.id}/contacts",
             headers=auth_headers_canvasser,
         )
         
@@ -346,7 +346,7 @@ class TestAnalyticsIntegration:
         """Test user performance analytics."""
         # Get user stats
         stats_response = client.get(
-            f"/users/{canvasser_user['id']}/stats",
+            f"/users/{canvasser_user.id}/stats",
             headers=auth_headers_manager,
         )
         
@@ -374,13 +374,13 @@ class TestErrorHandling:
         """Test handling of concurrent updates to same assignment."""
         # Simulate two concurrent updates
         response1 = client.patch(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
             json={"status": "in_progress"},
         )
         
         response2 = client.patch(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
             json={"status": "completed"},
         )

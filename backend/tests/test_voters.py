@@ -31,7 +31,7 @@ class TestVoterEndpoints:
         """Test getting single voter by ID."""
         voter = sample_voters[0]
         response = client.get(
-            f"/voters/{voter['id']}",
+            f"/voters/{voter.id}",
             headers=auth_headers_canvasser,
         )
         
@@ -126,7 +126,7 @@ class TestVoterEndpoints:
         }
         
         response = client.patch(
-            f"/voters/{voter['id']}",
+            f"/voters/{voter.id}",
             headers=auth_headers_manager,
             json=updates,
         )
@@ -143,7 +143,7 @@ class TestVoterEndpoints:
         """Test that canvasser cannot update voter data."""
         voter = sample_voters[0]
         response = client.patch(
-            f"/voters/{voter['id']}",
+            f"/voters/{voter.id}",
             headers=auth_headers_canvasser,
             json={"support_level": 4},
         )
@@ -157,7 +157,7 @@ class TestVoterEndpoints:
         voter = create_test_voter(db_session)
         
         response = client.delete(
-            f"/voters/{voter['id']}",
+            f"/voters/{voter.id}",
             headers=auth_headers_admin,
         )
         
@@ -294,7 +294,7 @@ class TestVoterSpatialQueries:
         """Test calculating distance from point to voter."""
         voter = sample_voters[0]
         response = client.get(
-            f"/voters/{voter['id']}/distance?"
+            f"/voters/{voter.id}/distance?"
             f"latitude=30.2672&longitude=-97.7431",
             headers=auth_headers_canvasser,
         )
@@ -339,7 +339,7 @@ class TestVoterContactHistory:
         """Test getting contact history for voter."""
         voter = sample_voters[0]
         response = client.get(
-            f"/voters/{voter['id']}/contacts",
+            f"/voters/{voter.id}/contacts",
             headers=auth_headers_canvasser,
         )
         
@@ -354,7 +354,7 @@ class TestVoterContactHistory:
         """Test that contact history is ordered by date descending."""
         voter = sample_voters[0]
         response = client.get(
-            f"/voters/{voter['id']}/contacts",
+            f"/voters/{voter.id}/contacts",
             headers=auth_headers_canvasser,
         )
         
@@ -372,7 +372,7 @@ class TestVoterContactHistory:
         """Test that voter includes last contact info."""
         voter = sample_voters[0]
         response = client.get(
-            f"/voters/{voter['id']}",
+            f"/voters/{voter.id}",
             headers=auth_headers_canvasser,
         )
         

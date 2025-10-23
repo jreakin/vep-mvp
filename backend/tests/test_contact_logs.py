@@ -67,7 +67,7 @@ class TestContactLogEndpoints:
         
         # Verify voter's support level updated
         voter_response = client.get(
-            f"/voters/{voter['id']}",
+            f"/voters/{voter.id}",
             headers=auth_headers_canvasser,
         )
         assert voter_response.json()["support_level"] == 5
@@ -143,7 +143,7 @@ class TestContactLogEndpoints:
     ):
         """Test getting single contact log by ID."""
         response = client.get(
-            f"/contact-logs/{sample_contact_log['id']}",
+            f"/contact-logs/{sample_contact_log.id}",
             headers=auth_headers_canvasser,
         )
         
@@ -161,7 +161,7 @@ class TestContactLogEndpoints:
         }
         
         response = client.patch(
-            f"/contact-logs/{sample_contact_log['id']}",
+            f"/contact-logs/{sample_contact_log.id}",
             headers=auth_headers_canvasser,
             json=updates,
         )
@@ -175,7 +175,7 @@ class TestContactLogEndpoints:
     ):
         """Test that users cannot update other users' contact logs."""
         response = client.patch(
-            f"/contact-logs/{sample_contact_log['id']}",
+            f"/contact-logs/{sample_contact_log.id}",
             headers=auth_headers_manager,
             json={"result": "Hacked"},
         )
@@ -191,7 +191,7 @@ class TestContactLogEndpoints:
     ):
         """Test deleting contact log as admin."""
         response = client.delete(
-            f"/contact-logs/{sample_contact_log['id']}",
+            f"/contact-logs/{sample_contact_log.id}",
             headers=auth_headers_admin,
         )
         
@@ -211,7 +211,7 @@ class TestContactLogFiltering:
     ):
         """Test filtering contact logs by assignment."""
         response = client.get(
-            f"/contact-logs?assignment_id={sample_assignment['id']}",
+            f"/contact-logs?assignment_id={sample_assignment.id}",
             headers=auth_headers_canvasser,
         )
         
@@ -224,7 +224,7 @@ class TestContactLogFiltering:
         """Test filtering contact logs by voter."""
         voter = sample_voters[0]
         response = client.get(
-            f"/contact-logs?voter_id={voter['id']}",
+            f"/contact-logs?voter_id={voter.id}",
             headers=auth_headers_canvasser,
         )
         
@@ -312,7 +312,7 @@ class TestContactLogStatistics:
     ):
         """Test getting contact stats for assignment."""
         response = client.get(
-            f"/assignments/{sample_assignment['id']}/stats",
+            f"/assignments/{sample_assignment.id}/stats",
             headers=auth_headers_canvasser,
         )
         
@@ -327,7 +327,7 @@ class TestContactLogStatistics:
     ):
         """Test getting contact stats for user."""
         response = client.get(
-            f"/users/{canvasser_user['id']}/stats",
+            f"/users/{canvasser_user.id}/stats",
             headers=auth_headers_canvasser,
         )
         
@@ -504,7 +504,7 @@ class TestContactLogIntegration:
         """Test complete contact logging workflow."""
         # 1. Get assignment with voters
         assignment_response = client.get(
-            f"/assignments/{sample_assignment['id']}",
+            f"/assignments/{sample_assignment.id}",
             headers=auth_headers_canvasser,
         )
         assert assignment_response.status_code == status.HTTP_200_OK
@@ -528,7 +528,7 @@ class TestContactLogIntegration:
         
         # 3. Check updated assignment progress
         progress_response = client.get(
-            f"/assignments/{sample_assignment['id']}/progress",
+            f"/assignments/{sample_assignment.id}/progress",
             headers=auth_headers_canvasser,
         )
         assert progress_response.status_code == status.HTTP_200_OK
