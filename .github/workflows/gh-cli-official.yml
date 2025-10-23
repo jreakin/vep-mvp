@@ -1,0 +1,35 @@
+name: GitHub CLI Official Action
+
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: read
+  projects: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup GitHub CLI
+      uses: actions/setup-gh@v1
+      with:
+        version: latest
+
+    - name: Authenticate
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+    - name: Test GitHub CLI
+      run: |
+        echo "Testing GitHub CLI..."
+        gh --version
+        echo "GitHub CLI is working!"
+
+    - name: Test project access
+      run: |
+        echo "Testing project access..."
+        gh project view 4 --owner jreakin
+        echo "Project access successful!"
