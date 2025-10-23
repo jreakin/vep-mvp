@@ -1,0 +1,342 @@
+name: Project Automation
+
+on:
+  issues:
+    types: [opened, closed, assigned, unassigned, labeled, unlabeled]
+  pull_request:
+    types: [opened, closed, merged, reopened, labeled, unlabeled]
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: write
+  projects: write
+
+jobs:
+  update-project-status:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' || github.event_name == 'pull_request'
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Update project card status
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { issue, pull_request } = context.payload;
+          const item = issue || pull_request;
+          
+          if (!item) {
+            console.log('No item found in payload');
+            return;
+          }
+          
+          console.log(`Processing ${context.eventName} event for ${item.number}`);
+          
+          // Get organization or user projects using Projects V2 API
+          const ownerType = context.payload.repository.owner.type;
+          const ownerQuery = ownerType === 'Organization' 
+            ? `organization(login: "${context.repo.owner}")`
+            : `user(login: "${context.repo.owner}")`;
+          
+          const projectQuery = `
+            query {
+              ${ownerQuery} {
+                projectsV2(first: 10) {
+                  nodes {
+                    id
+                    title
+                    number
+                  }
+                }
+              }
+            }
+          `;
+          
+          try {
+            const projectResult = await github.graphql(projectQuery);
+            const projects = ownerType === 'Organization' 
+              ? projectResult.organization.projectsV2.nodes
+              : projectResult.user.projectsV2.nodes;
+            
+            console.log('Available projects:', projects.map(p => p.title));
+            
+            // Find VEP MVP project (look for VEP, MVP, or similar)
+            const vepProject = projects.find(p => 
+              p.title.toLowerCase().includes('vep') || 
+              p.title.toLowerCase().includes('mvp') ||
+              p.title.toLowerCase().includes('voter')
+            );
+            
+            if (!vepProject) {
+              console.log('VEP MVP project not found. Available projects:', projects.map(p => p.title));
+              return;
+            }
+            
+            console.log(`Found project: ${vepProject.title} (${vepProject.id})`);
+            
+            // Get the project fields (including Status field)
+            const projectFieldsQuery = `
+              query {
+                node(id: "${vepProject.id}") {
+                  ... on ProjectV2 {
+                    fields(first: 20) {
+                      nodes {
+                        ... on ProjectV2Field {
+                          id
+                          name
+                        }
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                          options {
+                            id
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+            
+            const fieldsResult = await github.graphql(projectFieldsQuery);
+            const fields = fieldsResult.node.fields.nodes;
+            
+            console.log('Available fields:', fields.map(f => f.name));
+            
+            const statusField = fields.find(f => f.name === 'Status');
+            
+            if (!statusField || !statusField.options) {
+              console.log('Status field not found or has no options');
+              return;
+            }
+            
+            console.log('Status field options:', statusField.options.map(o => o.name));
+            
+            // Find the project item for this issue/PR
+            const itemType = issue ? 'Issue' : 'PullRequest';
+            const itemQuery = `
+              query {
+                repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
+                  ${issue ? 'issue' : 'pullRequest'}(number: ${item.number}) {
+                    id
+                    projectItems(first: 10) {
+                      nodes {
+                        id
+                        project {
+                          id
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+            
+            const itemResult = await github.graphql(itemQuery);
+            const node = issue ? itemResult.repository.issue : itemResult.repository.pullRequest;
+            const projectItems = node.projectItems.nodes;
+            
+            console.log(`Found ${projectItems.length} project items for ${itemType} #${item.number}`);
+            
+            const vepProjectItem = projectItems.find(item => item.project.id === vepProject.id);
+            
+            if (!vepProjectItem) {
+              console.log(`Project item not found for ${itemType} #${item.number} in project ${vepProject.title}`);
+              return;
+            }
+            
+            console.log(`Found project item: ${vepProjectItem.id}`);
+            
+            // Determine which status to move to based on event
+            let targetStatusName = null;
+            
+            if (context.eventName === 'issues') {
+              const { action } = context.payload;
+              
+              if (action === 'assigned') {
+                targetStatusName = 'In Progress';
+              } else if (action === 'closed') {
+                targetStatusName = 'Done';
+              } else if (action === 'labeled' && context.payload.label.name === 'in-progress') {
+                targetStatusName = 'In Progress';
+              } else if (action === 'labeled' && context.payload.label.name === 'completed') {
+                targetStatusName = 'Done';
+              }
+            } else if (context.eventName === 'pull_request') {
+              const { action, pull_request } = context.payload;
+              
+              if (action === 'opened' || action === 'reopened') {
+                targetStatusName = 'Code Review';
+              } else if (action === 'closed' && context.payload.pull_request.merged) {
+                targetStatusName = 'Testing';
+              } else if (action === 'closed' && !context.payload.pull_request.merged) {
+                targetStatusName = 'Ready';
+              }
+            }
+            
+            if (!targetStatusName) {
+              console.log('No status change needed for this event');
+              return;
+            }
+            
+            console.log(`Target status: ${targetStatusName}`);
+            
+            // Find the status option ID (handle emoji variations)
+            const emojis = ['🟠', '🟡', '👀', '✅', '🎉', '🚀', '🧪', '↩️'];
+            const targetOption = statusField.options.find(o =>
+              o.name === targetStatusName ||
+              o.name === `🟠 ${targetStatusName}` ||
+              o.name === `🟡 ${targetStatusName}` ||
+              o.name === `👀 ${targetStatusName}` ||
+              o.name === `✅ ${targetStatusName}` ||
+              o.name === `🎉 ${targetStatusName}` ||
+              o.name === `🚀 ${targetStatusName}` ||
+              o.name === `🧪 ${targetStatusName}` ||
+              o.name === `↩️ ${targetStatusName}` ||
+              emojis.some(e => o.name === `${e} ${targetStatusName}`)
+            );
+            
+            if (!targetOption) {
+              console.log(`Status option '${targetStatusName}' not found. Available options:`, statusField.options.map(o => o.name));
+              return;
+            }
+            
+            console.log(`Found status option: ${targetOption.name} (${targetOption.id})`);
+            
+            // Update the project item status
+            const updateMutation = `
+              mutation {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: "${vepProject.id}"
+                  itemId: "${vepProjectItem.id}"
+                  fieldId: "${statusField.id}"
+                  value: {
+                    singleSelectOptionId: "${targetOption.id}"
+                  }
+                }) {
+                  projectV2Item {
+                    id
+                  }
+                }
+              }
+            `;
+            
+            await github.graphql(updateMutation);
+            console.log(`Successfully updated project item status to: ${targetOption.name}`);
+            
+            // Add a comment to confirm the change
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: item.number,
+                body: `🎯 **Project Board Updated**: Moved to "${targetOption.name}" column automatically.`
+              });
+            } catch (error) {
+              console.log(`Could not add confirmation comment: ${error.message}`);
+            }
+            
+          } catch (error) {
+            console.log(`Error: ${error.message}`);
+            if (error.errors) {
+              console.log('GraphQL errors:', JSON.stringify(error.errors, null, 2));
+            }
+          }
+
+  update-issue-dependencies:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'closed'
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Check for dependent issues
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { issue } = context.payload;
+          
+          // Check if this is an agent issue
+          const agentLabels = issue.labels.filter(label => 
+            label.name.startsWith('agent-')
+          );
+          
+          if (agentLabels.length === 0) return;
+          
+          const agentNumber = agentLabels[0].name.split('-')[1];
+          
+          // Find issues that depend on this agent
+          try {
+            const dependentIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'blocked'
+            });
+            
+            for (const dependentIssue of dependentIssues.data) {
+              const body = dependentIssue.body || '';
+              
+              // Check if this issue is mentioned as a blocker
+              if (body.includes(`#${issue.number}`) || 
+                  body.includes(`Agent ${agentNumber}`) ||
+                  body.includes(`Agent ${agentNumber} database schema`) ||
+                  body.includes(`Agent ${agentNumber} backend API`)) {
+                
+                // Add a comment about the dependency being resolved
+                try {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: dependentIssue.number,
+                    body: `🎉 **Dependency Resolved**: Agent ${agentNumber} (Issue #${issue.number}) has been completed. This issue is now ready to start!`
+                  });
+                } catch (error) {
+                  console.log(`Could not add comment to issue #${dependentIssue.number}: ${error.message}`);
+                }
+                
+                console.log(`Notified issue #${dependentIssue.number} that dependency is resolved`);
+              }
+            }
+          } catch (error) {
+            console.log(`Error checking dependent issues: ${error.message}`);
+          }
+
+  create-progress-summary:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'closed'
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Update PROGRESS.md
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { issue } = context.payload;
+          
+          // Check if this is an agent issue
+          const agentLabels = issue.labels.filter(label => 
+            label.name.startsWith('agent-')
+          );
+          
+          if (agentLabels.length === 0) return;
+          
+          const agentNumber = agentLabels[0].name.split('-')[1];
+          
+          // Add a comment to the issue about completion
+          try {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `🎉 **Agent ${agentNumber} Completed**: This agent's work has been completed and merged. Please update the PROGRESS.md file manually to reflect this completion.`
+            });
+            console.log(`Added completion comment to Agent ${agentNumber} issue`);
+          } catch (error) {
+            console.log(`Could not add completion comment: ${error.message}`);
+          }
