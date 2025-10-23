@@ -23,11 +23,9 @@ class TestContactLogEndpoints:
         self, client, auth_headers_canvasser, sample_assignment, sample_voters
     ):
         """Test creating a contact log."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         contact_log = {
-            "assignment_id": sample_assignment["id"],
-            "voter_id": sample_voters[0]["id"],
+            "assignment_id": sample_assignment.id,
+            "voter_id": sample_voters[0].id,
             "contact_type": "knocked",
             "result": "Strong supporter, wants yard sign",
             "support_level": 5,
@@ -49,14 +47,12 @@ class TestContactLogEndpoints:
         self, client, auth_headers_canvasser, sample_assignment, sample_voters
     ):
         """Test that logging contact updates voter's support level."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         voter = sample_voters[0]
         
         # Log contact with new support level
         contact_log = {
-            "assignment_id": sample_assignment["id"],
-            "voter_id": voter["id"],
+            "assignment_id": sample_assignment.id,
+            "voter_id": voter.id,
             "contact_type": "knocked",
             "result": "Changed to strong supporter",
             "support_level": 5,
@@ -80,11 +76,9 @@ class TestContactLogEndpoints:
         self, client, auth_headers_canvasser, sample_voters
     ):
         """Test creating contact log with non-existent assignment."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         contact_log = {
             "assignment_id": str(uuid4()),  # Non-existent
-            "voter_id": sample_voters[0]["id"],
+            "voter_id": sample_voters[0].id,
             "contact_type": "knocked",
             "result": "Test",
         }
@@ -101,10 +95,8 @@ class TestContactLogEndpoints:
         self, client, auth_headers_canvasser, sample_assignment
     ):
         """Test creating contact log with non-existent voter."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         contact_log = {
-            "assignment_id": sample_assignment["id"],
+            "assignment_id": sample_assignment.id,
             "voter_id": str(uuid4()),  # Non-existent
             "contact_type": "knocked",
             "result": "Test",
@@ -122,11 +114,9 @@ class TestContactLogEndpoints:
         self, client, auth_headers_canvasser, sample_assignment, sample_voters
     ):
         """Test creating contact log with invalid contact type."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         contact_log = {
-            "assignment_id": sample_assignment["id"],
-            "voter_id": sample_voters[0]["id"],
+            "assignment_id": sample_assignment.id,
+            "voter_id": sample_voters[0].id,
             "contact_type": "invalid_type",
             "result": "Test",
         }
@@ -141,8 +131,6 @@ class TestContactLogEndpoints:
 
     def test_get_contact_logs_list(self, client, auth_headers_canvasser):
         """Test getting list of contact logs."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get("/contact-logs", headers=auth_headers_canvasser)
         
         assert response.status_code == status.HTTP_200_OK
@@ -154,8 +142,6 @@ class TestContactLogEndpoints:
         self, client, auth_headers_canvasser, sample_contact_log
     ):
         """Test getting single contact log by ID."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             f"/contact-logs/{sample_contact_log['id']}",
             headers=auth_headers_canvasser,
@@ -169,8 +155,6 @@ class TestContactLogEndpoints:
         self, client, auth_headers_canvasser, sample_contact_log
     ):
         """Test updating contact log."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         updates = {
             "result": "Updated result",
             "support_level": 4,
@@ -190,8 +174,6 @@ class TestContactLogEndpoints:
         self, client, auth_headers_manager, sample_contact_log
     ):
         """Test that users cannot update other users' contact logs."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.patch(
             f"/contact-logs/{sample_contact_log['id']}",
             headers=auth_headers_manager,
@@ -208,8 +190,6 @@ class TestContactLogEndpoints:
         self, client, auth_headers_admin, sample_contact_log
     ):
         """Test deleting contact log as admin."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.delete(
             f"/contact-logs/{sample_contact_log['id']}",
             headers=auth_headers_admin,
@@ -230,8 +210,6 @@ class TestContactLogFiltering:
         self, client, auth_headers_canvasser, sample_assignment
     ):
         """Test filtering contact logs by assignment."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             f"/contact-logs?assignment_id={sample_assignment['id']}",
             headers=auth_headers_canvasser,
@@ -240,12 +218,10 @@ class TestContactLogFiltering:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         for log in data["logs"]:
-            assert log["assignment_id"] == sample_assignment["id"]
+            assert log["assignment_id"] == sample_assignment.id
 
     def test_filter_by_voter(self, client, auth_headers_canvasser, sample_voters):
         """Test filtering contact logs by voter."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         voter = sample_voters[0]
         response = client.get(
             f"/contact-logs?voter_id={voter['id']}",
@@ -255,12 +231,10 @@ class TestContactLogFiltering:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         for log in data["logs"]:
-            assert log["voter_id"] == voter["id"]
+            assert log["voter_id"] == voter.id
 
     def test_filter_by_contact_type(self, client, auth_headers_canvasser):
         """Test filtering contact logs by contact type."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/contact-logs?contact_type=knocked",
             headers=auth_headers_canvasser,
@@ -273,8 +247,6 @@ class TestContactLogFiltering:
 
     def test_filter_by_date_range(self, client, auth_headers_canvasser):
         """Test filtering contact logs by date range."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         start_date = (datetime.now() - timedelta(days=7)).isoformat()
         end_date = datetime.now().isoformat()
         
@@ -287,8 +259,6 @@ class TestContactLogFiltering:
 
     def test_filter_by_support_level(self, client, auth_headers_manager):
         """Test filtering contact logs by support level."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/contact-logs?support_level=5",
             headers=auth_headers_manager,
@@ -302,8 +272,6 @@ class TestContactLogFiltering:
 
     def test_pagination_contact_logs(self, client, auth_headers_canvasser):
         """Test contact log pagination."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/contact-logs?limit=10&offset=0",
             headers=auth_headers_canvasser,
@@ -327,8 +295,6 @@ class TestContactLogStatistics:
 
     def test_get_daily_contact_stats(self, client, auth_headers_canvasser):
         """Test getting daily contact statistics."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         today = datetime.now().date().isoformat()
         response = client.get(
             f"/contact-logs/stats/daily?date={today}",
@@ -345,8 +311,6 @@ class TestContactLogStatistics:
         self, client, auth_headers_canvasser, sample_assignment
     ):
         """Test getting contact stats for assignment."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             f"/assignments/{sample_assignment['id']}/stats",
             headers=auth_headers_canvasser,
@@ -362,8 +326,6 @@ class TestContactLogStatistics:
         self, client, auth_headers_canvasser, canvasser_user
     ):
         """Test getting contact stats for user."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             f"/users/{canvasser_user['id']}/stats",
             headers=auth_headers_canvasser,
@@ -387,11 +349,9 @@ class TestContactTypes:
         self, client, auth_headers_canvasser, sample_assignment, sample_voters
     ):
         """Test logging 'knocked' contact."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         contact_log = {
-            "assignment_id": sample_assignment["id"],
-            "voter_id": sample_voters[0]["id"],
+            "assignment_id": sample_assignment.id,
+            "voter_id": sample_voters[0].id,
             "contact_type": "knocked",
             "result": "Home, talked to voter",
         }
@@ -408,11 +368,9 @@ class TestContactTypes:
         self, client, auth_headers_canvasser, sample_assignment, sample_voters
     ):
         """Test logging 'not_home' contact."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         contact_log = {
-            "assignment_id": sample_assignment["id"],
-            "voter_id": sample_voters[0]["id"],
+            "assignment_id": sample_assignment.id,
+            "voter_id": sample_voters[0].id,
             "contact_type": "not_home",
             "result": "No answer",
         }
@@ -429,11 +387,9 @@ class TestContactTypes:
         self, client, auth_headers_canvasser, sample_assignment, sample_voters
     ):
         """Test logging 'refused' contact."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         contact_log = {
-            "assignment_id": sample_assignment["id"],
-            "voter_id": sample_voters[0]["id"],
+            "assignment_id": sample_assignment.id,
+            "voter_id": sample_voters[0].id,
             "contact_type": "refused",
             "result": "Refused to engage",
         }
@@ -450,11 +406,9 @@ class TestContactTypes:
         self, client, auth_headers_canvasser, sample_assignment, sample_voters
     ):
         """Test logging 'phone' contact."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         contact_log = {
-            "assignment_id": sample_assignment["id"],
-            "voter_id": sample_voters[0]["id"],
+            "assignment_id": sample_assignment.id,
+            "voter_id": sample_voters[0].id,
             "contact_type": "phone",
             "result": "Spoke on phone",
         }
@@ -480,11 +434,9 @@ class TestOfflineSync:
         self, client, auth_headers_canvasser, sample_assignment, sample_voters
     ):
         """Test creating multiple contact logs at once (offline sync)."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         contact_logs = [
             {
-                "assignment_id": sample_assignment["id"],
+                "assignment_id": sample_assignment.id,
                 "voter_id": sample_voters[i]["id"],
                 "contact_type": "knocked",
                 "result": f"Contact {i}",
@@ -508,19 +460,17 @@ class TestOfflineSync:
         self, client, auth_headers_canvasser, sample_assignment, sample_voters
     ):
         """Test batch create with some failures."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         contact_logs = [
             # Valid log
             {
-                "assignment_id": sample_assignment["id"],
-                "voter_id": sample_voters[0]["id"],
+                "assignment_id": sample_assignment.id,
+                "voter_id": sample_voters[0].id,
                 "contact_type": "knocked",
                 "result": "Valid",
             },
             # Invalid log (bad voter ID)
             {
-                "assignment_id": sample_assignment["id"],
+                "assignment_id": sample_assignment.id,
                 "voter_id": str(uuid4()),
                 "contact_type": "knocked",
                 "result": "Invalid",
@@ -552,8 +502,6 @@ class TestContactLogIntegration:
         self, client, auth_headers_canvasser, sample_assignment, sample_voters
     ):
         """Test complete contact logging workflow."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # 1. Get assignment with voters
         assignment_response = client.get(
             f"/assignments/{sample_assignment['id']}",
@@ -564,7 +512,7 @@ class TestContactLogIntegration:
         
         # 2. Log contact for first voter
         contact_log = {
-            "assignment_id": sample_assignment["id"],
+            "assignment_id": sample_assignment.id,
             "voter_id": voters[0]["id"],
             "contact_type": "knocked",
             "result": "Strong supporter",
@@ -598,11 +546,9 @@ class TestContactLogIntegration:
         self, client, auth_headers_canvasser, sample_assignment, sample_voters
     ):
         """Test that contact logs capture location."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         contact_log = {
-            "assignment_id": sample_assignment["id"],
-            "voter_id": sample_voters[0]["id"],
+            "assignment_id": sample_assignment.id,
+            "voter_id": sample_voters[0].id,
             "contact_type": "knocked",
             "result": "Contacted",
             "location": {"latitude": 30.2672, "longitude": -97.7431},

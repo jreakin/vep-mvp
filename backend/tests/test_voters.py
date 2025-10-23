@@ -20,8 +20,6 @@ class TestVoterEndpoints:
 
     def test_get_voters_list(self, client, auth_headers_canvasser):
         """Test getting list of voters."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get("/voters", headers=auth_headers_canvasser)
         
         assert response.status_code == status.HTTP_200_OK
@@ -31,8 +29,6 @@ class TestVoterEndpoints:
 
     def test_get_voter_by_id(self, client, auth_headers_canvasser, sample_voters):
         """Test getting single voter by ID."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         voter = sample_voters[0]
         response = client.get(
             f"/voters/{voter['id']}",
@@ -41,14 +37,12 @@ class TestVoterEndpoints:
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["id"] == voter["id"]
-        assert data["voter_id"] == voter["voter_id"]
-        assert data["first_name"] == voter["first_name"]
+        assert data["id"] == voter.id
+        assert data["voter_id"] == voter.voter_id
+        assert data["first_name"] == voter.first_name
 
     def test_get_voter_not_found(self, client, auth_headers_canvasser):
         """Test getting non-existent voter."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         fake_id = str(uuid4())
         response = client.get(f"/voters/{fake_id}", headers=auth_headers_canvasser)
         
@@ -56,8 +50,6 @@ class TestVoterEndpoints:
 
     def test_create_voter_manager(self, client, auth_headers_manager):
         """Test creating new voter as manager."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         new_voter = {
             "voter_id": "TX99999999",
             "first_name": "New",
@@ -79,17 +71,15 @@ class TestVoterEndpoints:
         
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["voter_id"] == new_voter["voter_id"]
+        assert data["voter_id"] == new_voter.voter_id
         assert "id" in data
 
     def test_create_voter_duplicate_voter_id(
         self, client, auth_headers_manager, sample_voters
     ):
         """Test creating voter with duplicate voter_id."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         duplicate_voter = {
-            "voter_id": sample_voters[0]["voter_id"],  # Duplicate
+            "voter_id": sample_voters[0].voter_id,  # Duplicate
             "first_name": "Duplicate",
             "last_name": "Voter",
             "address": "123 Test St",
@@ -108,8 +98,6 @@ class TestVoterEndpoints:
 
     def test_create_voter_canvasser_forbidden(self, client, auth_headers_canvasser):
         """Test that canvasser cannot create voters."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         new_voter = {
             "voter_id": "TX88888888",
             "first_name": "Test",
@@ -130,8 +118,6 @@ class TestVoterEndpoints:
 
     def test_update_voter(self, client, auth_headers_manager, sample_voters):
         """Test updating voter information."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         voter = sample_voters[0]
         updates = {
             "phone": "555-9999",
@@ -155,8 +141,6 @@ class TestVoterEndpoints:
         self, client, auth_headers_canvasser, sample_voters
     ):
         """Test that canvasser cannot update voter data."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         voter = sample_voters[0]
         response = client.patch(
             f"/voters/{voter['id']}",
@@ -168,8 +152,6 @@ class TestVoterEndpoints:
 
     def test_delete_voter_admin(self, client, auth_headers_admin, db_session):
         """Test deleting voter as admin."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         from tests.conftest import create_test_voter
         
         voter = create_test_voter(db_session)
@@ -192,8 +174,6 @@ class TestVoterSearchAndFilter:
 
     def test_filter_voters_by_zip(self, client, auth_headers_canvasser):
         """Test filtering voters by ZIP code."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/voters?zip=78701",
             headers=auth_headers_canvasser,
@@ -202,12 +182,10 @@ class TestVoterSearchAndFilter:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         for voter in data["voters"]:
-            assert voter["zip"] == "78701"
+            assert voter.zip == "78701"
 
     def test_filter_voters_by_city(self, client, auth_headers_canvasser):
         """Test filtering voters by city."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/voters?city=Austin",
             headers=auth_headers_canvasser,
@@ -216,12 +194,10 @@ class TestVoterSearchAndFilter:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         for voter in data["voters"]:
-            assert voter["city"] == "Austin"
+            assert voter.city == "Austin"
 
     def test_filter_voters_by_support_level(self, client, auth_headers_manager):
         """Test filtering voters by support level."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/voters?support_level=5",
             headers=auth_headers_manager,
@@ -230,12 +206,10 @@ class TestVoterSearchAndFilter:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         for voter in data["voters"]:
-            assert voter["support_level"] == 5
+            assert voter.support_level == 5
 
     def test_filter_voters_by_party(self, client, auth_headers_canvasser):
         """Test filtering voters by party affiliation."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/voters?party=D",
             headers=auth_headers_canvasser,
@@ -244,12 +218,10 @@ class TestVoterSearchAndFilter:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         for voter in data["voters"]:
-            assert voter["party_affiliation"] == "D"
+            assert voter.party_affiliation == "D"
 
     def test_search_voters_by_name(self, client, auth_headers_canvasser):
         """Test searching voters by name."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/voters?search=Smith",
             headers=auth_headers_canvasser,
@@ -264,8 +236,6 @@ class TestVoterSearchAndFilter:
 
     def test_search_voters_by_address(self, client, auth_headers_canvasser):
         """Test searching voters by address."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/voters?search=Main St",
             headers=auth_headers_canvasser,
@@ -275,8 +245,6 @@ class TestVoterSearchAndFilter:
 
     def test_pagination_voters(self, client, auth_headers_canvasser):
         """Test voter list pagination."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/voters?limit=10&offset=0",
             headers=auth_headers_canvasser,
@@ -300,8 +268,6 @@ class TestVoterSpatialQueries:
 
     def test_find_voters_nearby(self, client, auth_headers_canvasser):
         """Test finding voters within radius of location."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/voters/nearby?latitude=30.2672&longitude=-97.7431&radius=1000",
             headers=auth_headers_canvasser,
@@ -314,8 +280,6 @@ class TestVoterSpatialQueries:
 
     def test_find_voters_in_bounding_box(self, client, auth_headers_canvasser):
         """Test finding voters within bounding box."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         response = client.get(
             "/voters/in-bounds?"
             "min_lat=30.25&max_lat=30.30&min_lng=-97.75&max_lng=-97.70",
@@ -328,8 +292,6 @@ class TestVoterSpatialQueries:
         self, client, auth_headers_canvasser, sample_voters
     ):
         """Test calculating distance from point to voter."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         voter = sample_voters[0]
         response = client.get(
             f"/voters/{voter['id']}/distance?"
@@ -346,8 +308,6 @@ class TestVoterSpatialQueries:
         self, client, auth_headers_manager, sample_voters
     ):
         """Test getting optimized route through voters."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         voter_ids = [v["id"] for v in sample_voters[:5]]
         
         response = client.post(
@@ -377,8 +337,6 @@ class TestVoterContactHistory:
         self, client, auth_headers_canvasser, sample_voters, sample_contact_log
     ):
         """Test getting contact history for voter."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         voter = sample_voters[0]
         response = client.get(
             f"/voters/{voter['id']}/contacts",
@@ -394,8 +352,6 @@ class TestVoterContactHistory:
         self, client, auth_headers_canvasser, sample_voters
     ):
         """Test that contact history is ordered by date descending."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         voter = sample_voters[0]
         response = client.get(
             f"/voters/{voter['id']}/contacts",
@@ -414,8 +370,6 @@ class TestVoterContactHistory:
         self, client, auth_headers_canvasser, sample_voters
     ):
         """Test that voter includes last contact info."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         voter = sample_voters[0]
         response = client.get(
             f"/voters/{voter['id']}",
@@ -440,8 +394,6 @@ class TestVoterValidation:
 
     def test_required_fields(self, client, auth_headers_manager):
         """Test that required fields are enforced."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         invalid_voters = [
             {},  # All fields missing
             {"voter_id": "TX123"},  # Missing name and address
@@ -458,8 +410,6 @@ class TestVoterValidation:
 
     def test_support_level_range(self, client, auth_headers_manager):
         """Test support level validation (1-5)."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         invalid_levels = [0, 6, -1, 10]
         
         for level in invalid_levels:
@@ -482,8 +432,6 @@ class TestVoterValidation:
 
     def test_location_coordinates_valid(self, client, auth_headers_manager):
         """Test location coordinate validation."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         invalid_locations = [
             {"latitude": 91, "longitude": 0},  # Invalid latitude
             {"latitude": 0, "longitude": 181},  # Invalid longitude
@@ -519,8 +467,6 @@ class TestVoterIntegration:
 
     def test_voter_lifecycle(self, client, auth_headers_manager, auth_headers_admin):
         """Test complete voter lifecycle: create, read, update, delete."""
-        pytest.skip("Backend implementation pending from Agent 2")
-        
         # 1. Create voter
         new_voter = {
             "voter_id": "TX00000001",
