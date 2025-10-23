@@ -8,10 +8,12 @@ This repository includes comprehensive CI/CD workflows for the VEP MVP project, 
 
 | Workflow | Trigger | Purpose | Status |
 |----------|---------|---------|--------|
+| **Backend CI** | Push/PR to main/develop | Build and lint Python backend | ✅ Active |
 | **Backend Tests** | Push/PR to main/develop | Test Python backend with PostgreSQL | ✅ Active |
+| **iOS CI** | Push/PR to main/develop | Build iOS app | ✅ Active |
 | **iOS Tests** | Push/PR to main/develop | Test iOS app with Xcode | ✅ Active |
 | **Deploy** | Push to main | Deploy backend and iOS to production | ✅ Active |
-| **Project Automation** | Issues/PRs | Auto-update project board and dependencies | ✅ Active |
+| **Project Automation** | Issues/PRs | Auto-update project board status | ✅ Active |
 | **Code Quality** | Push/PR + Weekly | Run linting, security, and quality checks | ✅ Active |
 | **Release** | Tags + Manual | Create releases with artifacts | ✅ Active |
 
@@ -85,30 +87,31 @@ This repository includes comprehensive CI/CD workflows for the VEP MVP project, 
 
 **Triggers:**
 - Issue events (opened, closed, assigned, labeled)
-- Pull request events (opened, closed, merged, labeled)
-- Project card events
+- Pull request events (opened, closed, reopened)
+- Manual workflow dispatch
 
 **Features:**
 - ✅ Auto-update project status using GitHub Projects V2 API
-- ✅ Auto-unblock dependent issues
+- ✅ Dynamic project discovery (no hardcoded IDs)
 - ✅ Update issue status based on events
-- ✅ Update PROGRESS.md automatically
-- ✅ Dependency resolution
 - ✅ Support for both organization and user projects
+- ✅ Automatic confirmation comments
 
 **Automation Rules:**
+- Issue opened → Move to "Ready"
 - Issue assigned → Move to "In Progress"
 - PR created/reopened → Move to "Code Review"
 - PR merged → Move to "Testing"
 - PR closed (not merged) → Move back to "Ready"
 - Issue closed → Move to "Done"
-- Agent completed → Unblock dependent agents
 
 **Technical Details:**
 - Uses GitHub Projects V2 API (not Classic Projects)
 - Automatically detects organization vs. user projects
+- Dynamically finds project by name (searches for "VEP" or "MVP")
 - Supports status field with custom options
 - Handles emoji prefixes in status names (🟠, 🟡, 👀, ✅, 🎉)
+- No hardcoded project IDs - fully dynamic!
 
 ### 5. Code Quality (`code-quality.yml`)
 
